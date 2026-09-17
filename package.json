@@ -10,8 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.6",
+    "katex": "^0.18.7",
+    "lucide-react": "^1.46.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-katex": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
