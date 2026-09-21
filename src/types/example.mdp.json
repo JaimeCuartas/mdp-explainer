@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "title": "MDP Causal Básico",
+    "updatedAt": "2026-09-22T09:00:00Z"
+  },
+  "logical": {
+    "states": [
+      { "id": "s0", "label": "S0 (Start)", "isInitial": true },
+      { "id": "s1", "label": "S1 (Cause)", "isCandidateCause": true },
+      { "id": "s2", "label": "S2 (Target)", "isTargetEffect": true }
+    ],
+    "actions": [
+      { "id": "a0", "label": "a_0", "sourceStateId": "s0" },
+      { "id": "a1", "label": "a_1", "sourceStateId": "s1" }
+    ],
+    "transitions": [
+      { "id": "t0", "actionId": "a0", "targetStateId": "s1", "probability": 0.8 },
+      { "id": "t1", "actionId": "a0", "targetStateId": "s2", "probability": 0.2 },
+      { "id": "t2", "actionId": "a1", "targetStateId": "s2", "probability": 1.0 }
+    ]
+  },
+  "graphical": {
+    "nodes": {
+      "s0": { "id": "s0", "position": { "x": 100, "y": 150 } },
+      "s1": { "id": "s1", "position": { "x": 350, "y": 150 } },
+      "s2": { "id": "s2", "position": { "x": 600, "y": 150 } }
+    }
+  }
+}
