@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { ReactFlow, Background, Controls, useNodesState, useEdgesState } from '@xyflow/react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import {
+  ReactFlow,
+  ReactFlowProvider,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+} from '@xyflow/react';
 import type { Node, Edge, NodeMouseHandler, EdgeMouseHandler, OnNodeDrag, OnConnect, Connection } from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 import type { NodePosition } from '../../hooks/useMDP';
@@ -58,7 +67,9 @@ function buildEdges(
   });
 }
 
-export function MDPFlowCanvas({
+const NEW_STATE_OFFSET: NodePosition = { x: -70, y: -20 };
+
+function FlowCanvasInner({
   states,
   actions,
   transitions,
@@ -72,6 +83,8 @@ export function MDPFlowCanvas({
   onAddState,
   onConnectStates,
 }: MDPFlowCanvasProps) {
+  const { screenToFlowPosition } = useReactFlow();
+
   const builtNodes = useMemo(
     () => buildNodes(states, nodePositions, selectedStateId),
     [states, nodePositions, selectedStateId]
@@ -112,13 +125,16 @@ export function MDPFlowCanvas({
     onClearSelection();
   }, [onClearSelection]);
 
-  const handlePaneDoubleClick = useCallback(() => {
-    const count = states.length;
-    onAddState('New State', {
-      x: 120 + (count % 5) * 200,
-      y: 160 + Math.floor(count / 5) * 150,
-    });
-  }, [onAddState, states.length]);
+  const handlePaneDoubleClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      onAddState('New State', {
+        x: flowPosition.x + NEW_STATE_OFFSET.x,
+        y: flowPosition.y + NEW_STATE_OFFSET.y,
+      });
+    },
+    [onAddState, screenToFlowPosition]
+  );
 
   const handleConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -148,5 +164,13 @@ export function MDPFlowCanvas({
         <Controls />
       </ReactFlow>
     </div>
+  );
+}
+
+export function MDPFlowCanvas(props: MDPFlowCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvasInner {...props} />
+    </ReactFlowProvider>
   );
 }
