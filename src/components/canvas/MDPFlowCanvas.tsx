@@ -53,8 +53,16 @@ function buildNodes(
     style: {
       background: state.isCandidateCause ? '#dbeafe' : state.isTargetEffect ? '#fef3c7' : '#ffffff',
       border: state.isInitial ? '2px solid #2563eb' : '1px solid #94a3b8',
-      borderRadius: '8px',
-      padding: '10px',
+      borderRadius: '50%',
+      width: 88,
+      height: 88,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center' as const,
+      padding: '8px',
+      fontSize: '0.8rem',
+      overflow: 'hidden',
     },
   }));
 }
@@ -79,7 +87,7 @@ function buildEdges(
   });
 }
 
-const NEW_STATE_OFFSET: NodePosition = { x: -70, y: -20 };
+const NEW_STATE_OFFSET: NodePosition = { x: -44, y: -44 };
 
 function FlowCanvasInner({
   states,
