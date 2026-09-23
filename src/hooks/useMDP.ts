@@ -31,10 +31,33 @@ export function useMDP() {
     setStates((prev) => prev.map((state) => (state.id === id ? { ...state, ...updates } : state)));
   }, []);
 
+  const removeState = useCallback((id: string): void => {
+    setStates((prev) => prev.filter((state) => state.id !== id));
+    setActions((prevActions) => {
+      const remainingActions = prevActions.filter((action) => action.sourceStateId !== id);
+      const removedActionIds = new Set(
+        prevActions.filter((action) => action.sourceStateId === id).map((action) => action.id)
+      );
+      setTransitions((prevTransitions) =>
+        prevTransitions.filter(
+          (transition) => transition.targetStateId !== id && !removedActionIds.has(transition.actionId)
+        )
+      );
+      return remainingActions;
+    });
+    setNodePositions((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([positionId]) => positionId !== id))
+    );
+  }, []);
+
   const addAction = useCallback((label: string, sourceStateId: string): string => {
     const id = generateId('a');
     setActions((prev) => [...prev, { id, label, sourceStateId }]);
     return id;
+  }, []);
+
+  const updateAction = useCallback((id: string, updates: Partial<MDPAction>): void => {
+    setActions((prev) => prev.map((action) => (action.id === id ? { ...action, ...updates } : action)));
   }, []);
 
   const addTransition = useCallback(
@@ -50,6 +73,10 @@ export function useMDP() {
     setTransitions((prev) =>
       prev.map((transition) => (transition.id === id ? { ...transition, ...updates } : transition))
     );
+  }, []);
+
+  const removeTransition = useCallback((id: string): void => {
+    setTransitions((prev) => prev.filter((transition) => transition.id !== id));
   }, []);
 
   const updateNodePosition = useCallback((stateId: string, position: NodePosition): void => {
@@ -86,9 +113,12 @@ export function useMDP() {
     setTitle,
     addState,
     updateState,
+    removeState,
     addAction,
+    updateAction,
     addTransition,
     updateTransition,
+    removeTransition,
     updateNodePosition,
     loadMDPFromJSON,
     resetMDP,

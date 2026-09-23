@@ -42,9 +42,26 @@ body, html, #root {
   gap: 8px;
 }
 
-.sidebar-header h2 {
+.mdp-title-input {
+  flex: 1;
   font-size: 1.1rem;
   font-weight: 600;
+  color: inherit;
+  font-family: inherit;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+.mdp-title-input:hover {
+  border-color: #e5e7eb;
+}
+
+.mdp-title-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #f9fafb;
 }
 
 .metric-card {

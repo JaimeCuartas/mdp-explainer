@@ -9,7 +9,17 @@ import {
   useEdgesState,
   useReactFlow,
 } from '@xyflow/react';
-import type { Node, Edge, NodeMouseHandler, EdgeMouseHandler, OnNodeDrag, OnConnect, Connection } from '@xyflow/react';
+import type {
+  Node,
+  Edge,
+  NodeMouseHandler,
+  EdgeMouseHandler,
+  OnNodeDrag,
+  OnConnect,
+  Connection,
+  OnNodesDelete,
+  OnEdgesDelete,
+} from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 import type { NodePosition } from '../../hooks/useMDP';
 
@@ -26,6 +36,8 @@ interface MDPFlowCanvasProps {
   onClearSelection: () => void;
   onAddState: (label: string, position: NodePosition) => void;
   onConnectStates: (sourceStateId: string, targetStateId: string) => void;
+  onDeleteState: (stateId: string) => void;
+  onDeleteTransition: (transitionId: string) => void;
 }
 
 function buildNodes(
@@ -82,6 +94,8 @@ function FlowCanvasInner({
   onClearSelection,
   onAddState,
   onConnectStates,
+  onDeleteState,
+  onDeleteTransition,
 }: MDPFlowCanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
 
@@ -145,6 +159,24 @@ function FlowCanvasInner({
     [onConnectStates]
   );
 
+  const handleNodesDelete: OnNodesDelete = useCallback(
+    (deletedNodes) => {
+      for (const node of deletedNodes) {
+        onDeleteState(node.id);
+      }
+    },
+    [onDeleteState]
+  );
+
+  const handleEdgesDelete: OnEdgesDelete = useCallback(
+    (deletedEdges) => {
+      for (const edge of deletedEdges) {
+        onDeleteTransition(edge.id);
+      }
+    },
+    [onDeleteTransition]
+  );
+
   return (
     <div className="canvas-wrapper" onDoubleClick={handlePaneDoubleClick}>
       <ReactFlow
@@ -157,6 +189,8 @@ function FlowCanvasInner({
         onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
         onConnect={handleConnect}
+        onNodesDelete={handleNodesDelete}
+        onEdgesDelete={handleEdgesDelete}
         zoomOnDoubleClick={false}
         fitView
       >

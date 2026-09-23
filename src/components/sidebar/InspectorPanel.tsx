@@ -1,4 +1,5 @@
 import type { ChangeEvent } from 'react';
+import { Trash2 } from 'lucide-react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 
 interface InspectorPanelProps {
@@ -7,7 +8,9 @@ interface InspectorPanelProps {
   actions: MDPAction[];
   states: MDPState[];
   onUpdateState: (id: string, updates: Partial<MDPState>) => void;
+  onUpdateAction: (id: string, updates: Partial<MDPAction>) => void;
   onUpdateTransition: (id: string, updates: Partial<MDPTransition>) => void;
+  onDeleteState: (id: string) => void;
 }
 
 export function InspectorPanel({
@@ -16,7 +19,9 @@ export function InspectorPanel({
   actions,
   states,
   onUpdateState,
+  onUpdateAction,
   onUpdateTransition,
+  onDeleteState,
 }: InspectorPanelProps) {
   if (selectedState) {
     const handleLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +63,10 @@ export function InspectorPanel({
           />
           <span>Target Effect</span>
         </label>
+
+        <button type="button" className="action-button danger" onClick={() => onDeleteState(selectedState.id)}>
+          <Trash2 size={16} /> Delete State
+        </button>
       </div>
     );
   }
@@ -70,14 +79,29 @@ export function InspectorPanel({
       onUpdateTransition(selectedTransition.id, { probability: Number(event.target.value) });
     };
 
+    const handleActionLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
+      if (action) {
+        onUpdateAction(action.id, { label: event.target.value });
+      }
+    };
+
     return (
       <div className="inspector-panel">
         <h3>Transition Inspector</h3>
 
         <p className="inspector-meta">
-          {action ? action.label : selectedTransition.actionId} &rarr;{' '}
-          {targetState ? targetState.label : selectedTransition.targetStateId}
+          Target: {targetState ? targetState.label : selectedTransition.targetStateId}
         </p>
+
+        <label className="inspector-field">
+          <span>Action Label</span>
+          <input
+            type="text"
+            value={action ? action.label : selectedTransition.actionId}
+            onChange={handleActionLabelChange}
+            disabled={!action}
+          />
+        </label>
 
         <label className="inspector-field">
           <span>Probability</span>

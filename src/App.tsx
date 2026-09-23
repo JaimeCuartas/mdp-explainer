@@ -13,11 +13,15 @@ function App() {
     actions,
     transitions,
     nodePositions,
+    setTitle,
     addState,
     updateState,
+    removeState,
     addAction,
+    updateAction,
     addTransition,
     updateTransition,
+    removeTransition,
     updateNodePosition,
     loadMDPFromJSON,
     resetMDP,
@@ -68,6 +72,22 @@ function App() {
     setSelectedTransitionId(null);
   }, []);
 
+  const handleDeleteState = useCallback(
+    (stateId: string) => {
+      removeState(stateId);
+      setSelectedStateId(null);
+    },
+    [removeState]
+  );
+
+  const handleDeleteTransition = useCallback(
+    (transitionId: string) => {
+      removeTransition(transitionId);
+      setSelectedTransitionId(null);
+    },
+    [removeTransition]
+  );
+
   const handleConnectStates = useCallback(
     (sourceStateId: string, targetStateId: string) => {
       const actionId = addAction(`a_${actions.length}`, sourceStateId);
@@ -91,12 +111,20 @@ function App() {
         onClearSelection={handleClearSelection}
         onAddState={addState}
         onConnectStates={handleConnectStates}
+        onDeleteState={handleDeleteState}
+        onDeleteTransition={handleDeleteTransition}
       />
 
       <aside className="sidebar">
         <div className="sidebar-header">
           <Activity size={20} color="#2563eb" />
-          <h2>{title}</h2>
+          <input
+            type="text"
+            className="mdp-title-input"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-label="MDP title"
+          />
         </div>
 
         <ToolbarPanel onSave={handleSave} onOpen={handleOpen} onReset={handleReset} />
@@ -107,7 +135,9 @@ function App() {
           actions={actions}
           states={states}
           onUpdateState={updateState}
+          onUpdateAction={updateAction}
           onUpdateTransition={updateTransition}
+          onDeleteState={handleDeleteState}
         />
       </aside>
     </div>
