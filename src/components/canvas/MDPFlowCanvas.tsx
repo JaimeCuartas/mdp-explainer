@@ -161,6 +161,11 @@ function FlowCanvasInner({
 
   const handlePaneDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) {
+        return;
+      }
+
       const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       onAddState('New State', {
         x: flowPosition.x + NEW_STATE_OFFSET.x,
