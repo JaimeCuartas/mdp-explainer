@@ -10,7 +10,6 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import type {
-  Node,
   Edge,
   NodeMouseHandler,
   EdgeMouseHandler,
@@ -19,18 +18,26 @@ import type {
   Connection,
   OnNodesDelete,
   OnEdgesDelete,
+  NodeTypes,
 } from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
-import type { NodePosition } from '../../hooks/useMDP';
+import type { NodePosition, NodeSize } from '../../hooks/useMDP';
+import { StateNode } from './StateNode';
+import type { StateFlowNode } from './StateNode';
+
+const nodeTypes: NodeTypes = { state: StateNode };
+const DEFAULT_NODE_SIZE: NodeSize = { width: 88, height: 88 };
 
 interface MDPFlowCanvasProps {
   states: MDPState[];
   actions: MDPAction[];
   transitions: MDPTransition[];
   nodePositions: Record<string, NodePosition>;
+  nodeSizes: Record<string, NodeSize>;
   selectedStateId: string | null;
   selectedTransitionId: string | null;
   onNodeDragStop: (stateId: string, position: NodePosition) => void;
+  onNodeResize: (stateId: string, size: NodeSize) => void;
   onSelectState: (stateId: string) => void;
   onSelectTransition: (transitionId: string) => void;
   onClearSelection: () => void;
@@ -43,28 +50,28 @@ interface MDPFlowCanvasProps {
 function buildNodes(
   states: MDPState[],
   nodePositions: Record<string, NodePosition>,
-  selectedStateId: string | null
-): Node[] {
-  return states.map((state, index) => ({
-    id: state.id,
-    position: nodePositions[state.id] ?? { x: 120 + index * 220, y: 160 },
-    data: { label: state.label },
-    selected: state.id === selectedStateId,
-    style: {
-      background: state.isCandidateCause ? '#dbeafe' : state.isTargetEffect ? '#fef3c7' : '#ffffff',
-      border: state.isInitial ? '2px solid #2563eb' : '1px solid #94a3b8',
-      borderRadius: '50%',
-      width: 88,
-      height: 88,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      textAlign: 'center' as const,
-      padding: '8px',
-      fontSize: '0.8rem',
-      overflow: 'hidden',
-    },
-  }));
+  nodeSizes: Record<string, NodeSize>,
+  selectedStateId: string | null,
+  onNodeResize: (stateId: string, size: NodeSize) => void
+): StateFlowNode[] {
+  return states.map((state, index) => {
+    const size = nodeSizes[state.id] ?? DEFAULT_NODE_SIZE;
+    return {
+      id: state.id,
+      type: 'state',
+      position: nodePositions[state.id] ?? { x: 120 + index * 220, y: 160 },
+      width: size.width,
+      height: size.height,
+      selected: state.id === selectedStateId,
+      data: {
+        label: state.label,
+        isInitial: state.isInitial,
+        isCandidateCause: state.isCandidateCause,
+        isTargetEffect: state.isTargetEffect,
+        onResizeEnd: (nextSize: NodeSize) => onNodeResize(state.id, nextSize),
+      },
+    };
+  });
 }
 
 function buildEdges(
@@ -87,16 +94,21 @@ function buildEdges(
   });
 }
 
-const NEW_STATE_OFFSET: NodePosition = { x: -44, y: -44 };
+const NEW_STATE_OFFSET: NodePosition = {
+  x: -DEFAULT_NODE_SIZE.width / 2,
+  y: -DEFAULT_NODE_SIZE.height / 2,
+};
 
 function FlowCanvasInner({
   states,
   actions,
   transitions,
   nodePositions,
+  nodeSizes,
   selectedStateId,
   selectedTransitionId,
   onNodeDragStop,
+  onNodeResize,
   onSelectState,
   onSelectTransition,
   onClearSelection,
@@ -108,8 +120,8 @@ function FlowCanvasInner({
   const { screenToFlowPosition } = useReactFlow();
 
   const builtNodes = useMemo(
-    () => buildNodes(states, nodePositions, selectedStateId),
-    [states, nodePositions, selectedStateId]
+    () => buildNodes(states, nodePositions, nodeSizes, selectedStateId, onNodeResize),
+    [states, nodePositions, nodeSizes, selectedStateId, onNodeResize]
   );
   const builtEdges = useMemo(
     () => buildEdges(actions, transitions, selectedTransitionId),
@@ -190,6 +202,7 @@ function FlowCanvasInner({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={handleNodeDragStop}

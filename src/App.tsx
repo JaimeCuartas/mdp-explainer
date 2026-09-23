@@ -13,6 +13,7 @@ function App() {
     actions,
     transitions,
     nodePositions,
+    nodeSizes,
     setTitle,
     addState,
     updateState,
@@ -23,6 +24,7 @@ function App() {
     updateTransition,
     removeTransition,
     updateNodePosition,
+    updateNodeSize,
     loadMDPFromJSON,
     resetMDP,
   } = useMDP();
@@ -34,8 +36,8 @@ function App() {
   const selectedTransition = transitions.find((transition) => transition.id === selectedTransitionId) ?? null;
 
   const handleSave = useCallback(() => {
-    exportMDPToFile(states, actions, transitions, nodePositions, title);
-  }, [states, actions, transitions, nodePositions, title]);
+    exportMDPToFile(states, actions, transitions, nodePositions, title, nodeSizes);
+  }, [states, actions, transitions, nodePositions, title, nodeSizes]);
 
   const handleOpen = useCallback(
     async (file: File) => {
@@ -103,9 +105,11 @@ function App() {
         actions={actions}
         transitions={transitions}
         nodePositions={nodePositions}
+        nodeSizes={nodeSizes}
         selectedStateId={selectedStateId}
         selectedTransitionId={selectedTransitionId}
         onNodeDragStop={updateNodePosition}
+        onNodeResize={updateNodeSize}
         onSelectState={handleSelectState}
         onSelectTransition={handleSelectTransition}
         onClearSelection={handleClearSelection}

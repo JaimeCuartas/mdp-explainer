@@ -3,6 +3,7 @@ import type { MDPState, MDPAction, MDPTransition } from './mdp';
 export interface MDPVisualNode {
   id: string;
   position: { x: number; y: number };
+  size?: { width: number; height: number };
 }
 
 export interface MDPFileFormat {

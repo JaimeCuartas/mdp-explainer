@@ -7,6 +7,11 @@ export interface NodePosition {
   y: number;
 }
 
+export interface NodeSize {
+  width: number;
+  height: number;
+}
+
 const DEFAULT_TITLE = 'Untitled MDP';
 
 function generateId(prefix: string): string {
@@ -19,6 +24,7 @@ export function useMDP() {
   const [actions, setActions] = useState<MDPAction[]>([]);
   const [transitions, setTransitions] = useState<MDPTransition[]>([]);
   const [nodePositions, setNodePositions] = useState<Record<string, NodePosition>>({});
+  const [nodeSizes, setNodeSizes] = useState<Record<string, NodeSize>>({});
 
   const addState = useCallback((label: string, position: NodePosition): string => {
     const id = generateId('s');
@@ -48,6 +54,7 @@ export function useMDP() {
     setNodePositions((prev) =>
       Object.fromEntries(Object.entries(prev).filter(([positionId]) => positionId !== id))
     );
+    setNodeSizes((prev) => Object.fromEntries(Object.entries(prev).filter(([sizeId]) => sizeId !== id)));
   }, []);
 
   const addAction = useCallback((label: string, sourceStateId: string): string => {
@@ -83,6 +90,10 @@ export function useMDP() {
     setNodePositions((prev) => ({ ...prev, [stateId]: position }));
   }, []);
 
+  const updateNodeSize = useCallback((stateId: string, size: NodeSize): void => {
+    setNodeSizes((prev) => ({ ...prev, [stateId]: size }));
+  }, []);
+
   const loadMDPFromJSON = useCallback((data: MDPFileFormat): void => {
     setTitle(data.metadata.title);
     setStates(data.logical.states);
@@ -90,10 +101,15 @@ export function useMDP() {
     setTransitions(data.logical.transitions);
 
     const positions: Record<string, NodePosition> = {};
+    const sizes: Record<string, NodeSize> = {};
     for (const node of Object.values(data.graphical.nodes)) {
       positions[node.id] = node.position;
+      if (node.size) {
+        sizes[node.id] = node.size;
+      }
     }
     setNodePositions(positions);
+    setNodeSizes(sizes);
   }, []);
 
   const resetMDP = useCallback((): void => {
@@ -102,6 +118,7 @@ export function useMDP() {
     setActions([]);
     setTransitions([]);
     setNodePositions({});
+    setNodeSizes({});
   }, []);
 
   return {
@@ -110,6 +127,7 @@ export function useMDP() {
     actions,
     transitions,
     nodePositions,
+    nodeSizes,
     setTitle,
     addState,
     updateState,
@@ -120,6 +138,7 @@ export function useMDP() {
     updateTransition,
     removeTransition,
     updateNodePosition,
+    updateNodeSize,
     loadMDPFromJSON,
     resetMDP,
   };

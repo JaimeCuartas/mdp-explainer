@@ -8,13 +8,16 @@ export function exportMDPToFile(
   actions: MDPAction[],
   transitions: MDPTransition[],
   nodesPosition: Record<string, { x: number; y: number }>,
-  title: string
+  title: string,
+  nodesSize: Record<string, { width: number; height: number }> = {}
 ): void {
   const nodes: Record<string, MDPVisualNode> = {};
   for (const state of states) {
+    const size = nodesSize[state.id];
     nodes[state.id] = {
       id: state.id,
       position: nodesPosition[state.id] ?? { x: 0, y: 0 },
+      ...(size ? { size } : {}),
     };
   }
 
