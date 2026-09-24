@@ -118,17 +118,24 @@ function buildActionNodes(
 function buildEdges(
   actions: MDPAction[],
   transitions: MDPTransition[],
+  selectedActionId: string | null,
   selectedTransitionId: string | null
 ): Edge[] {
-  const stateToActionEdges: Edge[] = actions.map((action) => ({
-    id: `${STRUCTURAL_EDGE_PREFIX}${action.id}`,
-    source: action.sourceStateId,
-    target: action.id,
-    type: 'straight',
-    selectable: false,
-    deletable: false,
-    style: { stroke: '#94a3b8' },
-  }));
+  const stateToActionEdges: Edge[] = actions.map((action) => {
+    const isSelected = action.id === selectedActionId;
+    return {
+      id: `${STRUCTURAL_EDGE_PREFIX}${action.id}`,
+      source: action.sourceStateId,
+      target: action.id,
+      type: 'straight',
+      selectable: false,
+      deletable: false,
+      selected: isSelected,
+      label: action.label,
+      labelBgStyle: { fill: '#f9fafb' },
+      style: { stroke: '#94a3b8' },
+    };
+  });
 
   const actionToStateEdges: Edge[] = transitions.map((transition) => ({
     id: transition.id,
@@ -139,6 +146,7 @@ function buildEdges(
     selected: transition.id === selectedTransitionId,
     style: { stroke: '#000000' },
     markerEnd: { type: MarkerType.ArrowClosed, color: '#000000' },
+    labelBgStyle: { fill: '#f9fafb' },
   }));
 
   return [...stateToActionEdges, ...actionToStateEdges];
@@ -197,8 +205,8 @@ function FlowCanvasInner({
     [states, nodePositions, nodeSizes, selectedStateId, onNodeResize, actions, actionPositions, selectedActionId]
   );
   const builtEdges = useMemo(
-    () => buildEdges(actions, transitions, selectedTransitionId),
-    [actions, transitions, selectedTransitionId]
+    () => buildEdges(actions, transitions, selectedActionId, selectedTransitionId),
+    [actions, transitions, selectedActionId, selectedTransitionId]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(builtNodes);
@@ -232,11 +240,12 @@ function FlowCanvasInner({
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_event, edge) => {
       if (edge.id.startsWith(STRUCTURAL_EDGE_PREFIX)) {
+        onSelectAction(edge.id.slice(STRUCTURAL_EDGE_PREFIX.length));
         return;
       }
       onSelectTransition(edge.id);
     },
-    [onSelectTransition]
+    [onSelectAction, onSelectTransition]
   );
 
   const handlePaneClick = useCallback(() => {
