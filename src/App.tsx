@@ -14,30 +14,36 @@ function App() {
     transitions,
     nodePositions,
     nodeSizes,
+    actionPositions,
     setTitle,
     addState,
     updateState,
     removeState,
-    addAction,
+    addActionWithState,
     updateAction,
+    removeAction,
     addTransition,
+    addStateWithAction,
     updateTransition,
     removeTransition,
     updateNodePosition,
     updateNodeSize,
+    updateActionPosition,
     loadMDPFromJSON,
     resetMDP,
   } = useMDP();
 
   const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
   const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(null);
 
   const selectedState = states.find((state) => state.id === selectedStateId) ?? null;
+  const selectedAction = actions.find((action) => action.id === selectedActionId) ?? null;
   const selectedTransition = transitions.find((transition) => transition.id === selectedTransitionId) ?? null;
 
   const handleSave = useCallback(() => {
-    exportMDPToFile(states, actions, transitions, nodePositions, title, nodeSizes);
-  }, [states, actions, transitions, nodePositions, title, nodeSizes]);
+    exportMDPToFile(states, actions, transitions, nodePositions, title, nodeSizes, actionPositions);
+  }, [states, actions, transitions, nodePositions, title, nodeSizes, actionPositions]);
 
   const handleOpen = useCallback(
     async (file: File) => {
@@ -45,6 +51,7 @@ function App() {
         const data = await importMDPFromFile(file);
         loadMDPFromJSON(data);
         setSelectedStateId(null);
+        setSelectedActionId(null);
         setSelectedTransitionId(null);
       } catch (error) {
         window.alert(error instanceof Error ? error.message : 'Failed to open the MDP file.');
@@ -56,21 +63,31 @@ function App() {
   const handleReset = useCallback(() => {
     resetMDP();
     setSelectedStateId(null);
+    setSelectedActionId(null);
     setSelectedTransitionId(null);
   }, [resetMDP]);
 
   const handleSelectState = useCallback((stateId: string) => {
     setSelectedStateId(stateId);
+    setSelectedActionId(null);
+    setSelectedTransitionId(null);
+  }, []);
+
+  const handleSelectAction = useCallback((actionId: string) => {
+    setSelectedActionId(actionId);
+    setSelectedStateId(null);
     setSelectedTransitionId(null);
   }, []);
 
   const handleSelectTransition = useCallback((transitionId: string) => {
     setSelectedTransitionId(transitionId);
     setSelectedStateId(null);
+    setSelectedActionId(null);
   }, []);
 
   const handleClearSelection = useCallback(() => {
     setSelectedStateId(null);
+    setSelectedActionId(null);
     setSelectedTransitionId(null);
   }, []);
 
@@ -82,6 +99,14 @@ function App() {
     [removeState]
   );
 
+  const handleDeleteAction = useCallback(
+    (actionId: string) => {
+      removeAction(actionId);
+      setSelectedActionId(null);
+    },
+    [removeAction]
+  );
+
   const handleDeleteTransition = useCallback(
     (transitionId: string) => {
       removeTransition(transitionId);
@@ -90,12 +115,18 @@ function App() {
     [removeTransition]
   );
 
-  const handleConnectStates = useCallback(
-    (sourceStateId: string, targetStateId: string) => {
-      const actionId = addAction(`a_${actions.length}`, sourceStateId);
-      addTransition(actionId, targetStateId, 1);
+  const handleConnectStateToAction = useCallback(
+    (stateId: string, actionId: string) => {
+      updateAction(actionId, { sourceStateId: stateId });
     },
-    [actions.length, addAction, addTransition]
+    [updateAction]
+  );
+
+  const handleConnectActionToState = useCallback(
+    (actionId: string, stateId: string) => {
+      addTransition(actionId, stateId, 1);
+    },
+    [addTransition]
   );
 
   return (
@@ -106,16 +137,24 @@ function App() {
         transitions={transitions}
         nodePositions={nodePositions}
         nodeSizes={nodeSizes}
+        actionPositions={actionPositions}
         selectedStateId={selectedStateId}
+        selectedActionId={selectedActionId}
         selectedTransitionId={selectedTransitionId}
         onNodeDragStop={updateNodePosition}
+        onActionDragStop={updateActionPosition}
         onNodeResize={updateNodeSize}
         onSelectState={handleSelectState}
+        onSelectAction={handleSelectAction}
         onSelectTransition={handleSelectTransition}
         onClearSelection={handleClearSelection}
         onAddState={addState}
-        onConnectStates={handleConnectStates}
+        onConnectStateToAction={handleConnectStateToAction}
+        onConnectActionToState={handleConnectActionToState}
+        onCreateActionFromState={addActionWithState}
+        onCreateStateFromAction={addStateWithAction}
         onDeleteState={handleDeleteState}
+        onDeleteAction={handleDeleteAction}
         onDeleteTransition={handleDeleteTransition}
       />
 
@@ -135,6 +174,7 @@ function App() {
 
         <InspectorPanel
           selectedState={selectedState}
+          selectedAction={selectedAction}
           selectedTransition={selectedTransition}
           actions={actions}
           states={states}
@@ -142,6 +182,7 @@ function App() {
           onUpdateAction={updateAction}
           onUpdateTransition={updateTransition}
           onDeleteState={handleDeleteState}
+          onDeleteAction={handleDeleteAction}
         />
       </aside>
     </div>

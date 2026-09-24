@@ -25,6 +25,7 @@ export function useMDP() {
   const [transitions, setTransitions] = useState<MDPTransition[]>([]);
   const [nodePositions, setNodePositions] = useState<Record<string, NodePosition>>({});
   const [nodeSizes, setNodeSizes] = useState<Record<string, NodeSize>>({});
+  const [actionPositions, setActionPositions] = useState<Record<string, NodePosition>>({});
 
   const addState = useCallback((label: string, position: NodePosition): string => {
     const id = generateId('s');
@@ -49,6 +50,9 @@ export function useMDP() {
           (transition) => transition.targetStateId !== id && !removedActionIds.has(transition.actionId)
         )
       );
+      setActionPositions((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([actionId]) => !removedActionIds.has(actionId)))
+      );
       return remainingActions;
     });
     setNodePositions((prev) =>
@@ -57,9 +61,10 @@ export function useMDP() {
     setNodeSizes((prev) => Object.fromEntries(Object.entries(prev).filter(([sizeId]) => sizeId !== id)));
   }, []);
 
-  const addAction = useCallback((label: string, sourceStateId: string): string => {
+  const addActionWithState = useCallback((sourceStateId: string, position: NodePosition): string => {
     const id = generateId('a');
-    setActions((prev) => [...prev, { id, label, sourceStateId }]);
+    setActions((prev) => [...prev, { id, label: `a_${prev.length}`, sourceStateId }]);
+    setActionPositions((prev) => ({ ...prev, [id]: position }));
     return id;
   }, []);
 
@@ -67,10 +72,32 @@ export function useMDP() {
     setActions((prev) => prev.map((action) => (action.id === id ? { ...action, ...updates } : action)));
   }, []);
 
+  const removeAction = useCallback((id: string): void => {
+    setActions((prev) => prev.filter((action) => action.id !== id));
+    setTransitions((prev) => prev.filter((transition) => transition.actionId !== id));
+    setActionPositions((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([actionId]) => actionId !== id))
+    );
+  }, []);
+
   const addTransition = useCallback(
     (actionId: string, targetStateId: string, probability: number): string => {
       const id = generateId('t');
       setTransitions((prev) => [...prev, { id, actionId, targetStateId, probability }]);
+      return id;
+    },
+    []
+  );
+
+  const addStateWithAction = useCallback(
+    (sourceActionId: string, position: NodePosition, probability = 1): string => {
+      const id = generateId('s');
+      setStates((prev) => [...prev, { id, label: 'New State' }]);
+      setNodePositions((prev) => ({ ...prev, [id]: position }));
+      setTransitions((prev) => [
+        ...prev,
+        { id: generateId('t'), actionId: sourceActionId, targetStateId: id, probability },
+      ]);
       return id;
     },
     []
@@ -94,15 +121,25 @@ export function useMDP() {
     setNodeSizes((prev) => ({ ...prev, [stateId]: size }));
   }, []);
 
+  const updateActionPosition = useCallback((actionId: string, position: NodePosition): void => {
+    setActionPositions((prev) => ({ ...prev, [actionId]: position }));
+  }, []);
+
   const loadMDPFromJSON = useCallback((data: MDPFileFormat): void => {
     setTitle(data.metadata.title);
     setStates(data.logical.states);
     setActions(data.logical.actions);
     setTransitions(data.logical.transitions);
 
+    const actionIds = new Set(data.logical.actions.map((action) => action.id));
     const positions: Record<string, NodePosition> = {};
     const sizes: Record<string, NodeSize> = {};
+    const actionPositionEntries: Record<string, NodePosition> = {};
     for (const node of Object.values(data.graphical.nodes)) {
+      if (actionIds.has(node.id)) {
+        actionPositionEntries[node.id] = node.position;
+        continue;
+      }
       positions[node.id] = node.position;
       if (node.size) {
         sizes[node.id] = node.size;
@@ -110,6 +147,7 @@ export function useMDP() {
     }
     setNodePositions(positions);
     setNodeSizes(sizes);
+    setActionPositions(actionPositionEntries);
   }, []);
 
   const resetMDP = useCallback((): void => {
@@ -119,6 +157,7 @@ export function useMDP() {
     setTransitions([]);
     setNodePositions({});
     setNodeSizes({});
+    setActionPositions({});
   }, []);
 
   return {
@@ -128,17 +167,21 @@ export function useMDP() {
     transitions,
     nodePositions,
     nodeSizes,
+    actionPositions,
     setTitle,
     addState,
     updateState,
     removeState,
-    addAction,
+    addActionWithState,
     updateAction,
+    removeAction,
     addTransition,
+    addStateWithAction,
     updateTransition,
     removeTransition,
     updateNodePosition,
     updateNodeSize,
+    updateActionPosition,
     loadMDPFromJSON,
     resetMDP,
   };

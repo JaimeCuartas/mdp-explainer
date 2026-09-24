@@ -15,18 +15,26 @@ import type {
   EdgeMouseHandler,
   OnNodeDrag,
   OnConnect,
+  OnConnectEnd,
   Connection,
   OnNodesDelete,
   OnEdgesDelete,
+  IsValidConnection,
   NodeTypes,
 } from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 import type { NodePosition, NodeSize } from '../../hooks/useMDP';
 import { StateNode } from './StateNode';
 import type { StateFlowNode } from './StateNode';
+import { ActionNode } from './ActionNode';
+import type { ActionFlowNode } from './ActionNode';
 
-const nodeTypes: NodeTypes = { state: StateNode };
+type FlowNode = StateFlowNode | ActionFlowNode;
+
+const nodeTypes: NodeTypes = { state: StateNode, action: ActionNode };
 const DEFAULT_NODE_SIZE: NodeSize = { width: 88, height: 88 };
+const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
+const STRUCTURAL_EDGE_PREFIX = 'sa-';
 
 interface MDPFlowCanvasProps {
   states: MDPState[];
@@ -34,20 +42,28 @@ interface MDPFlowCanvasProps {
   transitions: MDPTransition[];
   nodePositions: Record<string, NodePosition>;
   nodeSizes: Record<string, NodeSize>;
+  actionPositions: Record<string, NodePosition>;
   selectedStateId: string | null;
+  selectedActionId: string | null;
   selectedTransitionId: string | null;
   onNodeDragStop: (stateId: string, position: NodePosition) => void;
+  onActionDragStop: (actionId: string, position: NodePosition) => void;
   onNodeResize: (stateId: string, size: NodeSize) => void;
   onSelectState: (stateId: string) => void;
+  onSelectAction: (actionId: string) => void;
   onSelectTransition: (transitionId: string) => void;
   onClearSelection: () => void;
   onAddState: (label: string, position: NodePosition) => void;
-  onConnectStates: (sourceStateId: string, targetStateId: string) => void;
+  onConnectStateToAction: (stateId: string, actionId: string) => void;
+  onConnectActionToState: (actionId: string, stateId: string) => void;
+  onCreateActionFromState: (stateId: string, position: NodePosition) => void;
+  onCreateStateFromAction: (actionId: string, position: NodePosition) => void;
   onDeleteState: (stateId: string) => void;
+  onDeleteAction: (actionId: string) => void;
   onDeleteTransition: (transitionId: string) => void;
 }
 
-function buildNodes(
+function buildStateNodes(
   states: MDPState[],
   nodePositions: Record<string, NodePosition>,
   nodeSizes: Record<string, NodeSize>,
@@ -74,24 +90,55 @@ function buildNodes(
   });
 }
 
+function buildActionNodes(
+  actions: MDPAction[],
+  actionPositions: Record<string, NodePosition>,
+  nodePositions: Record<string, NodePosition>,
+  selectedActionId: string | null
+): ActionFlowNode[] {
+  return actions.map((action, index) => {
+    const sourcePosition = nodePositions[action.sourceStateId];
+    const fallback = sourcePosition
+      ? { x: sourcePosition.x + 40, y: sourcePosition.y + 120 }
+      : { x: 160 + index * 140, y: 320 };
+
+    return {
+      id: action.id,
+      type: 'action',
+      position: actionPositions[action.id] ?? fallback,
+      width: ACTION_NODE_SIZE.width,
+      height: ACTION_NODE_SIZE.height,
+      selected: action.id === selectedActionId,
+      data: { label: action.label },
+    };
+  });
+}
+
 function buildEdges(
   actions: MDPAction[],
   transitions: MDPTransition[],
   selectedTransitionId: string | null
 ): Edge[] {
-  const actionMap = new Map(actions.map((action) => [action.id, action]));
+  const stateToActionEdges: Edge[] = actions.map((action) => ({
+    id: `${STRUCTURAL_EDGE_PREFIX}${action.id}`,
+    source: action.sourceStateId,
+    target: action.id,
+    type: 'straight',
+    selectable: false,
+    deletable: false,
+    style: { stroke: '#94a3b8' },
+  }));
 
-  return transitions.map((transition) => {
-    const action = actionMap.get(transition.actionId);
-    return {
-      id: transition.id,
-      source: action ? action.sourceStateId : '',
-      target: transition.targetStateId,
-      label: `${action ? action.label : transition.actionId} (p=${transition.probability})`,
-      animated: true,
-      selected: transition.id === selectedTransitionId,
-    };
-  });
+  const actionToStateEdges: Edge[] = transitions.map((transition) => ({
+    id: transition.id,
+    source: transition.actionId,
+    target: transition.targetStateId,
+    label: `p=${transition.probability}`,
+    animated: true,
+    selected: transition.id === selectedTransitionId,
+  }));
+
+  return [...stateToActionEdges, ...actionToStateEdges];
 }
 
 const NEW_STATE_OFFSET: NodePosition = {
@@ -99,57 +146,91 @@ const NEW_STATE_OFFSET: NodePosition = {
   y: -DEFAULT_NODE_SIZE.height / 2,
 };
 
+const NEW_ACTION_OFFSET: NodePosition = {
+  x: -ACTION_NODE_SIZE.width / 2,
+  y: -ACTION_NODE_SIZE.height / 2,
+};
+
+function getClientPoint(event: MouseEvent | TouchEvent): { clientX: number; clientY: number } {
+  return 'changedTouches' in event ? event.changedTouches[0] : event;
+}
+
 function FlowCanvasInner({
   states,
   actions,
   transitions,
   nodePositions,
   nodeSizes,
+  actionPositions,
   selectedStateId,
+  selectedActionId,
   selectedTransitionId,
   onNodeDragStop,
+  onActionDragStop,
   onNodeResize,
   onSelectState,
+  onSelectAction,
   onSelectTransition,
   onClearSelection,
   onAddState,
-  onConnectStates,
+  onConnectStateToAction,
+  onConnectActionToState,
+  onCreateActionFromState,
+  onCreateStateFromAction,
   onDeleteState,
+  onDeleteAction,
   onDeleteTransition,
 }: MDPFlowCanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
 
-  const builtNodes = useMemo(
-    () => buildNodes(states, nodePositions, nodeSizes, selectedStateId, onNodeResize),
-    [states, nodePositions, nodeSizes, selectedStateId, onNodeResize]
+  const stateIds = useMemo(() => new Set(states.map((state) => state.id)), [states]);
+  const actionIds = useMemo(() => new Set(actions.map((action) => action.id)), [actions]);
+
+  const builtNodes = useMemo<FlowNode[]>(
+    () => [
+      ...buildStateNodes(states, nodePositions, nodeSizes, selectedStateId, onNodeResize),
+      ...buildActionNodes(actions, actionPositions, nodePositions, selectedActionId),
+    ],
+    [states, nodePositions, nodeSizes, selectedStateId, onNodeResize, actions, actionPositions, selectedActionId]
   );
   const builtEdges = useMemo(
     () => buildEdges(actions, transitions, selectedTransitionId),
     [actions, transitions, selectedTransitionId]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(builtNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(builtNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(builtEdges);
 
   useEffect(() => setNodes(builtNodes), [builtNodes, setNodes]);
   useEffect(() => setEdges(builtEdges), [builtEdges, setEdges]);
 
-  const handleNodeDragStop: OnNodeDrag = useCallback(
+  const handleNodeDragStop: OnNodeDrag<FlowNode> = useCallback(
     (_event, node) => {
-      onNodeDragStop(node.id, node.position);
+      if (node.type === 'action') {
+        onActionDragStop(node.id, node.position);
+      } else {
+        onNodeDragStop(node.id, node.position);
+      }
     },
-    [onNodeDragStop]
+    [onNodeDragStop, onActionDragStop]
   );
 
-  const handleNodeClick: NodeMouseHandler = useCallback(
+  const handleNodeClick: NodeMouseHandler<FlowNode> = useCallback(
     (_event, node) => {
-      onSelectState(node.id);
+      if (node.type === 'action') {
+        onSelectAction(node.id);
+      } else {
+        onSelectState(node.id);
+      }
     },
-    [onSelectState]
+    [onSelectState, onSelectAction]
   );
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_event, edge) => {
+      if (edge.id.startsWith(STRUCTURAL_EDGE_PREFIX)) {
+        return;
+      }
       onSelectTransition(edge.id);
     },
     [onSelectTransition]
@@ -175,22 +256,72 @@ function FlowCanvasInner({
     [onAddState, screenToFlowPosition]
   );
 
-  const handleConnect: OnConnect = useCallback(
-    (connection: Connection) => {
-      if (connection.source && connection.target) {
-        onConnectStates(connection.source, connection.target);
+  const isValidConnection: IsValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      const { source, target } = connection;
+      if (!source || !target || source === target) {
+        return false;
       }
+      const sourceIsState = stateIds.has(source);
+      const sourceIsAction = actionIds.has(source);
+      const targetIsState = stateIds.has(target);
+      const targetIsAction = actionIds.has(target);
+      return (sourceIsState && targetIsAction) || (sourceIsAction && targetIsState);
     },
-    [onConnectStates]
+    [stateIds, actionIds]
   );
 
-  const handleNodesDelete: OnNodesDelete = useCallback(
-    (deletedNodes) => {
-      for (const node of deletedNodes) {
-        onDeleteState(node.id);
+  const handleConnect: OnConnect = useCallback(
+    (connection: Connection) => {
+      const { source, target } = connection;
+      if (!source || !target) {
+        return;
+      }
+      if (stateIds.has(source) && actionIds.has(target)) {
+        onConnectStateToAction(source, target);
+      } else if (actionIds.has(source) && stateIds.has(target)) {
+        onConnectActionToState(source, target);
       }
     },
-    [onDeleteState]
+    [stateIds, actionIds, onConnectStateToAction, onConnectActionToState]
+  );
+
+  const handleConnectEnd: OnConnectEnd = useCallback(
+    (event, connectionState) => {
+      if (connectionState.toNode || !connectionState.fromNode) {
+        return;
+      }
+
+      const { clientX, clientY } = getClientPoint(event);
+      const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
+      const sourceNode = connectionState.fromNode;
+
+      if (sourceNode.type === 'state') {
+        onCreateActionFromState(sourceNode.id, {
+          x: flowPosition.x + NEW_ACTION_OFFSET.x,
+          y: flowPosition.y + NEW_ACTION_OFFSET.y,
+        });
+      } else if (sourceNode.type === 'action') {
+        onCreateStateFromAction(sourceNode.id, {
+          x: flowPosition.x + NEW_STATE_OFFSET.x,
+          y: flowPosition.y + NEW_STATE_OFFSET.y,
+        });
+      }
+    },
+    [screenToFlowPosition, onCreateActionFromState, onCreateStateFromAction]
+  );
+
+  const handleNodesDelete: OnNodesDelete<FlowNode> = useCallback(
+    (deletedNodes) => {
+      for (const node of deletedNodes) {
+        if (node.type === 'action') {
+          onDeleteAction(node.id);
+        } else {
+          onDeleteState(node.id);
+        }
+      }
+    },
+    [onDeleteState, onDeleteAction]
   );
 
   const handleEdgesDelete: OnEdgesDelete = useCallback(
@@ -214,7 +345,9 @@ function FlowCanvasInner({
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
+        isValidConnection={isValidConnection}
         onConnect={handleConnect}
+        onConnectEnd={handleConnectEnd}
         onNodesDelete={handleNodesDelete}
         onEdgesDelete={handleEdgesDelete}
         zoomOnDoubleClick={false}

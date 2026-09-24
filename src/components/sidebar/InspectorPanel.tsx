@@ -4,6 +4,7 @@ import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 
 interface InspectorPanelProps {
   selectedState: MDPState | null;
+  selectedAction: MDPAction | null;
   selectedTransition: MDPTransition | null;
   actions: MDPAction[];
   states: MDPState[];
@@ -11,10 +12,12 @@ interface InspectorPanelProps {
   onUpdateAction: (id: string, updates: Partial<MDPAction>) => void;
   onUpdateTransition: (id: string, updates: Partial<MDPTransition>) => void;
   onDeleteState: (id: string) => void;
+  onDeleteAction: (id: string) => void;
 }
 
 export function InspectorPanel({
   selectedState,
+  selectedAction,
   selectedTransition,
   actions,
   states,
@@ -22,6 +25,7 @@ export function InspectorPanel({
   onUpdateAction,
   onUpdateTransition,
   onDeleteState,
+  onDeleteAction,
 }: InspectorPanelProps) {
   if (selectedState) {
     const handleLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +75,33 @@ export function InspectorPanel({
     );
   }
 
+  if (selectedAction) {
+    const sourceState = states.find((s) => s.id === selectedAction.sourceStateId);
+
+    const handleActionLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
+      onUpdateAction(selectedAction.id, { label: event.target.value });
+    };
+
+    return (
+      <div className="inspector-panel">
+        <h3>Action Inspector</h3>
+
+        <label className="inspector-field">
+          <span>Label</span>
+          <input type="text" value={selectedAction.label} onChange={handleActionLabelChange} />
+        </label>
+
+        <p className="inspector-meta">
+          Source State: {sourceState ? sourceState.label : selectedAction.sourceStateId}
+        </p>
+
+        <button type="button" className="action-button danger" onClick={() => onDeleteAction(selectedAction.id)}>
+          <Trash2 size={16} /> Delete Action
+        </button>
+      </div>
+    );
+  }
+
   if (selectedTransition) {
     const action = actions.find((a) => a.id === selectedTransition.actionId);
     const targetState = states.find((s) => s.id === selectedTransition.targetStateId);
@@ -113,7 +144,7 @@ export function InspectorPanel({
 
   return (
     <div className="inspector-panel inspector-empty">
-      <p>Select a state or transition on the canvas to inspect its properties.</p>
+      <p>Select a state, action, or transition on the canvas to inspect its properties.</p>
     </div>
   );
 }
