@@ -8,6 +8,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  MarkerType,
 } from '@xyflow/react';
 import type {
   Edge,
@@ -136,6 +137,8 @@ function buildEdges(
     label: `p=${transition.probability}`,
     animated: true,
     selected: transition.id === selectedTransitionId,
+    style: { stroke: '#000000' },
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#000000' },
   }));
 
   return [...stateToActionEdges, ...actionToStateEdges];
