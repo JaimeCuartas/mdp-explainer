@@ -3,7 +3,7 @@ import { Activity } from 'lucide-react';
 import { MDPFlowCanvas } from './components/canvas/MDPFlowCanvas';
 import { ToolbarPanel } from './components/sidebar/ToolbarPanel';
 import { InspectorPanel } from './components/sidebar/InspectorPanel';
-import { useMDP } from './hooks/useMDP';
+import { useMDP, DEFAULT_NODE_SIZE } from './hooks/useMDP';
 import { exportMDPToFile, importMDPFromFile } from './core/serializers/jsonSerializer';
 
 function App() {
@@ -38,6 +38,7 @@ function App() {
   const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(null);
 
   const selectedState = states.find((state) => state.id === selectedStateId) ?? null;
+  const selectedStateSize = selectedState ? (nodeSizes[selectedState.id] ?? DEFAULT_NODE_SIZE) : null;
   const selectedAction = actions.find((action) => action.id === selectedActionId) ?? null;
   const selectedTransition = transitions.find((transition) => transition.id === selectedTransitionId) ?? null;
 
@@ -178,7 +179,9 @@ function App() {
           selectedTransition={selectedTransition}
           actions={actions}
           states={states}
+          stateSize={selectedStateSize}
           onUpdateState={updateState}
+          onUpdateStateSize={updateNodeSize}
           onUpdateAction={updateAction}
           onUpdateTransition={updateTransition}
           onDeleteState={handleDeleteState}

@@ -25,6 +25,7 @@ import type {
   EdgeTypes,
 } from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
+import { DEFAULT_NODE_SIZE } from '../../hooks/useMDP';
 import type { NodePosition, NodeSize } from '../../hooks/useMDP';
 import { StateNode } from './StateNode';
 import type { StateFlowNode } from './StateNode';
@@ -40,7 +41,6 @@ type FlowEdge = ActionFlowEdge | TransitionFlowEdge;
 
 const nodeTypes: NodeTypes = { state: StateNode, action: ActionNode };
 const edgeTypes: EdgeTypes = { action: ActionEdge, transition: TransitionEdge };
-const DEFAULT_NODE_SIZE: NodeSize = { width: 50, height: 50 };
 const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
 const ACTION_EDGE_PREFIX = 'sa-';
 const SELECTION_COLOR = '#2563eb';
@@ -77,7 +77,8 @@ function buildStateNodes(
   nodePositions: Record<string, NodePosition>,
   nodeSizes: Record<string, NodeSize>,
   selectedStateId: string | null,
-  onNodeResize: (stateId: string, size: NodeSize) => void
+  onNodeResize: (stateId: string, size: NodeSize) => void,
+  onNodeDragStop: (stateId: string, position: NodePosition) => void
 ): StateFlowNode[] {
   return states.map((state, index) => {
     const size = nodeSizes[state.id] ?? DEFAULT_NODE_SIZE;
@@ -93,7 +94,10 @@ function buildStateNodes(
         isInitial: state.isInitial,
         isCandidateCause: state.isCandidateCause,
         isTargetEffect: state.isTargetEffect,
-        onResizeEnd: (nextSize: NodeSize) => onNodeResize(state.id, nextSize),
+        onResizeEnd: (nextSize: NodeSize, nextPosition: NodePosition) => {
+          onNodeResize(state.id, nextSize);
+          onNodeDragStop(state.id, nextPosition);
+        },
       },
     };
   });
@@ -213,10 +217,20 @@ function FlowCanvasInner({
 
   const builtNodes = useMemo<FlowNode[]>(
     () => [
-      ...buildStateNodes(states, nodePositions, nodeSizes, selectedStateId, onNodeResize),
+      ...buildStateNodes(states, nodePositions, nodeSizes, selectedStateId, onNodeResize, onNodeDragStop),
       ...buildActionNodes(actions, actionPositions, nodePositions, selectedActionId),
     ],
-    [states, nodePositions, nodeSizes, selectedStateId, onNodeResize, actions, actionPositions, selectedActionId]
+    [
+      states,
+      nodePositions,
+      nodeSizes,
+      selectedStateId,
+      onNodeResize,
+      onNodeDragStop,
+      actions,
+      actionPositions,
+      selectedActionId,
+    ]
   );
   const builtEdges = useMemo(
     () => buildEdges(actions, transitions, selectedActionId, selectedTransitionId),

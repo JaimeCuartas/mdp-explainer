@@ -12,6 +12,9 @@ export interface NodeSize {
   height: number;
 }
 
+export const DEFAULT_NODE_SIZE: NodeSize = { width: 50, height: 50 };
+export const MIN_NODE_SIZE = 44;
+
 const DEFAULT_TITLE = 'Untitled MDP';
 
 function generateId(prefix: string): string {

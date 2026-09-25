@@ -1,5 +1,7 @@
 import type { ChangeEvent } from 'react';
 import { Trash2 } from 'lucide-react';
+import { MIN_NODE_SIZE } from '../../hooks/useMDP';
+import type { NodeSize } from '../../hooks/useMDP';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 
 interface InspectorPanelProps {
@@ -8,7 +10,9 @@ interface InspectorPanelProps {
   selectedTransition: MDPTransition | null;
   actions: MDPAction[];
   states: MDPState[];
+  stateSize: NodeSize | null;
   onUpdateState: (id: string, updates: Partial<MDPState>) => void;
+  onUpdateStateSize: (id: string, size: NodeSize) => void;
   onUpdateAction: (id: string, updates: Partial<MDPAction>) => void;
   onUpdateTransition: (id: string, updates: Partial<MDPTransition>) => void;
   onDeleteState: (id: string) => void;
@@ -22,7 +26,9 @@ export function InspectorPanel({
   selectedTransition,
   actions,
   states,
+  stateSize,
   onUpdateState,
+  onUpdateStateSize,
   onUpdateAction,
   onUpdateTransition,
   onDeleteState,
@@ -34,6 +40,18 @@ export function InspectorPanel({
       onUpdateState(selectedState.id, { label: event.target.value });
     };
 
+    const handleWidthChange = (event: ChangeEvent<HTMLInputElement>) => {
+      if (stateSize) {
+        onUpdateStateSize(selectedState.id, { width: Number(event.target.value), height: stateSize.height });
+      }
+    };
+
+    const handleHeightChange = (event: ChangeEvent<HTMLInputElement>) => {
+      if (stateSize) {
+        onUpdateStateSize(selectedState.id, { width: stateSize.width, height: Number(event.target.value) });
+      }
+    };
+
     return (
       <div className="inspector-panel">
         <h3>State Inspector</h3>
@@ -41,6 +59,16 @@ export function InspectorPanel({
         <label className="inspector-field">
           <span>Label</span>
           <input type="text" value={selectedState.label} onChange={handleLabelChange} />
+        </label>
+
+        <label className="inspector-field">
+          <span>Width</span>
+          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.width ?? MIN_NODE_SIZE} onChange={handleWidthChange} />
+        </label>
+
+        <label className="inspector-field">
+          <span>Height</span>
+          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.height ?? MIN_NODE_SIZE} onChange={handleHeightChange} />
         </label>
 
         <label className="inspector-checkbox">

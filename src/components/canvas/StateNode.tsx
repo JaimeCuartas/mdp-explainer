@@ -2,16 +2,15 @@ import { memo } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
 import { InlineMath } from 'react-katex';
-import type { NodeSize } from '../../hooks/useMDP';
-
-const MIN_NODE_SIZE = 44;
+import { MIN_NODE_SIZE } from '../../hooks/useMDP';
+import type { NodePosition, NodeSize } from '../../hooks/useMDP';
 
 export interface StateNodeData extends Record<string, unknown> {
   label: string;
   isInitial?: boolean;
   isCandidateCause?: boolean;
   isTargetEffect?: boolean;
-  onResizeEnd: (size: NodeSize) => void;
+  onResizeEnd: (size: NodeSize, position: NodePosition) => void;
 }
 
 export type StateFlowNode = Node<StateNodeData, 'state'>;
@@ -26,8 +25,9 @@ function StateNodeComponent({ data, selected }: NodeProps<StateFlowNode>) {
         isVisible={selected}
         minWidth={MIN_NODE_SIZE}
         minHeight={MIN_NODE_SIZE}
-        keepAspectRatio
-        onResizeEnd={(_event, params) => data.onResizeEnd({ width: params.width, height: params.height })}
+        onResizeEnd={(_event, params) =>
+          data.onResizeEnd({ width: params.width, height: params.height }, { x: params.x, y: params.y })
+        }
       />
       <Handle type="target" position={Position.Top} />
       <div className="state-node-circle" style={{ background, border }}>
