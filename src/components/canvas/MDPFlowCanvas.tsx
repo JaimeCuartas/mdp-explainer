@@ -36,6 +36,7 @@ const nodeTypes: NodeTypes = { state: StateNode, action: ActionNode };
 const DEFAULT_NODE_SIZE: NodeSize = { width: 88, height: 88 };
 const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
 const STRUCTURAL_EDGE_PREFIX = 'sa-';
+const SELECTION_COLOR = '#2563eb';
 
 interface MDPFlowCanvasProps {
   states: MDPState[];
@@ -133,21 +134,24 @@ function buildEdges(
       selected: isSelected,
       label: action.label,
       labelBgStyle: { fill: '#f9fafb' },
-      style: { stroke: '#94a3b8' },
+      style: { stroke: isSelected ? SELECTION_COLOR : '#94a3b8', strokeWidth: isSelected ? 2 : 1 },
     };
   });
 
-  const actionToStateEdges: Edge[] = transitions.map((transition) => ({
-    id: transition.id,
-    source: transition.actionId,
-    target: transition.targetStateId,
-    label: `p=${transition.probability}`,
-    animated: true,
-    selected: transition.id === selectedTransitionId,
-    style: { stroke: '#000000' },
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#000000' },
-    labelBgStyle: { fill: '#f9fafb' },
-  }));
+  const actionToStateEdges: Edge[] = transitions.map((transition) => {
+    const isSelected = transition.id === selectedTransitionId;
+    return {
+      id: transition.id,
+      source: transition.actionId,
+      target: transition.targetStateId,
+      label: `p=${transition.probability}`,
+      animated: true,
+      selected: isSelected,
+      style: { stroke: isSelected ? SELECTION_COLOR : '#000000', strokeWidth: isSelected ? 2 : 1 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: isSelected ? SELECTION_COLOR : '#000000' },
+      labelBgStyle: { fill: '#f9fafb' },
+    };
+  });
 
   return [...stateToActionEdges, ...actionToStateEdges];
 }
