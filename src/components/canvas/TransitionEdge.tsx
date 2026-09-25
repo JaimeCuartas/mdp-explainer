@@ -39,6 +39,7 @@ export function TransitionEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             background: '#f9fafb',
             pointerEvents: 'none',
+            fontSize: '0.7rem',
           }}
         >
           <InlineMath math={`p=${data?.probability ?? 0}`} />

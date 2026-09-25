@@ -29,6 +29,7 @@ export function ActionEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             background: '#f9fafb',
             pointerEvents: 'none',
+            fontSize: '0.7rem',
           }}
         >
           <InlineMath math={data?.label ?? ''} />
