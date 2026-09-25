@@ -13,6 +13,7 @@ interface InspectorPanelProps {
   onUpdateTransition: (id: string, updates: Partial<MDPTransition>) => void;
   onDeleteState: (id: string) => void;
   onDeleteAction: (id: string) => void;
+  onDeleteTransition: (id: string) => void;
 }
 
 export function InspectorPanel({
@@ -26,6 +27,7 @@ export function InspectorPanel({
   onUpdateTransition,
   onDeleteState,
   onDeleteAction,
+  onDeleteTransition,
 }: InspectorPanelProps) {
   if (selectedState) {
     const handleLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -138,6 +140,10 @@ export function InspectorPanel({
           <span>Probability</span>
           <input type="number" min={0} max={1} step={0.01} value={selectedTransition.probability} onChange={handleProbabilityChange} />
         </label>
+
+        <button type="button" className="action-button danger" onClick={() => onDeleteTransition(selectedTransition.id)}>
+          <Trash2 size={16} /> Delete Transition
+        </button>
       </div>
     );
   }

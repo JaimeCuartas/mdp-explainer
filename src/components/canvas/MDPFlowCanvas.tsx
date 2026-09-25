@@ -33,7 +33,7 @@ import type { ActionFlowNode } from './ActionNode';
 type FlowNode = StateFlowNode | ActionFlowNode;
 
 const nodeTypes: NodeTypes = { state: StateNode, action: ActionNode };
-const DEFAULT_NODE_SIZE: NodeSize = { width: 88, height: 88 };
+const DEFAULT_NODE_SIZE: NodeSize = { width: 44, height: 44 };
 const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
 const STRUCTURAL_EDGE_PREFIX = 'sa-';
 const SELECTION_COLOR = '#2563eb';
@@ -134,7 +134,11 @@ function buildEdges(
       selected: isSelected,
       label: action.label,
       labelBgStyle: { fill: '#f9fafb' },
-      style: { stroke: isSelected ? SELECTION_COLOR : '#94a3b8', strokeWidth: isSelected ? 2 : 1 },
+      className: 'structural-edge',
+      style: {
+        stroke: isSelected ? SELECTION_COLOR : '#94a3b8',
+        strokeWidth: isSelected ? 2 : 1,
+      },
     };
   });
 
@@ -264,7 +268,7 @@ function FlowCanvasInner({
       }
 
       const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      onAddState('New State', {
+      onAddState('s', {
         x: flowPosition.x + NEW_STATE_OFFSET.x,
         y: flowPosition.y + NEW_STATE_OFFSET.y,
       });

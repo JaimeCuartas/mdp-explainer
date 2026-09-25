@@ -3,7 +3,7 @@ import { Handle, NodeResizer, Position } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
 import type { NodeSize } from '../../hooks/useMDP';
 
-const MIN_NODE_SIZE = 48;
+const MIN_NODE_SIZE = 44;
 
 export interface StateNodeData extends Record<string, unknown> {
   label: string;

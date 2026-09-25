@@ -183,6 +183,7 @@ function App() {
           onUpdateTransition={updateTransition}
           onDeleteState={handleDeleteState}
           onDeleteAction={handleDeleteAction}
+          onDeleteTransition={handleDeleteTransition}
         />
       </aside>
     </div>

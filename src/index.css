@@ -54,6 +54,12 @@ body, html, #root {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
 }
 
+/* Restores the pointer cursor React Flow normally gives .selectable edges,
+   which we opted out of on purpose so it doesn't fight our own selection state. */
+.react-flow__edge.structural-edge {
+  cursor: pointer;
+}
+
 .sidebar {
   width: 340px;
   height: 100%;

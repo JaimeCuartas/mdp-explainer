@@ -63,7 +63,7 @@ export function useMDP() {
 
   const addActionWithState = useCallback((sourceStateId: string, position: NodePosition): string => {
     const id = generateId('a');
-    setActions((prev) => [...prev, { id, label: `a_${prev.length}`, sourceStateId }]);
+    setActions((prev) => [...prev, { id, label: 'a', sourceStateId }]);
     setActionPositions((prev) => ({ ...prev, [id]: position }));
     return id;
   }, []);
@@ -92,7 +92,7 @@ export function useMDP() {
   const addStateWithAction = useCallback(
     (sourceActionId: string, position: NodePosition, probability = 1): string => {
       const id = generateId('s');
-      setStates((prev) => [...prev, { id, label: 'New State' }]);
+      setStates((prev) => [...prev, { id, label: 's' }]);
       setNodePositions((prev) => ({ ...prev, [id]: position }));
       setTransitions((prev) => [
         ...prev,
