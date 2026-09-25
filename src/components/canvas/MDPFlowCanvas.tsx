@@ -44,6 +44,7 @@ const edgeTypes: EdgeTypes = { action: ActionEdge, transition: TransitionEdge };
 const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
 const ACTION_EDGE_PREFIX = 'sa-';
 const SELECTION_COLOR = '#2563eb';
+const TRANSITION_CURVE_SPACING = 30;
 
 interface MDPFlowCanvasProps {
   states: MDPState[];
@@ -152,8 +153,23 @@ function buildEdges(
     };
   });
 
+  const transitionGroups = new Map<string, MDPTransition[]>();
+  for (const transition of transitions) {
+    const key = `${transition.actionId}::${transition.targetStateId}`;
+    const group = transitionGroups.get(key);
+    if (group) {
+      group.push(transition);
+    } else {
+      transitionGroups.set(key, [transition]);
+    }
+  }
+
   const actionToStateEdges: TransitionFlowEdge[] = transitions.map((transition) => {
     const isSelected = transition.id === selectedTransitionId;
+    const group = transitionGroups.get(`${transition.actionId}::${transition.targetStateId}`) ?? [transition];
+    const indexInGroup = group.findIndex((groupTransition) => groupTransition.id === transition.id);
+    const curveOffset = (indexInGroup - (group.length - 1) / 2) * TRANSITION_CURVE_SPACING;
+
     return {
       id: transition.id,
       source: transition.actionId,
@@ -163,7 +179,7 @@ function buildEdges(
       selected: isSelected,
       style: { stroke: isSelected ? SELECTION_COLOR : '#000000', strokeWidth: isSelected ? 2 : 1 },
       markerEnd: { type: MarkerType.ArrowClosed, color: isSelected ? SELECTION_COLOR : '#000000' },
-      data: { probability: transition.probability },
+      data: { probability: transition.probability, reward: transition.reward ?? 0, curveOffset },
     };
   });
 

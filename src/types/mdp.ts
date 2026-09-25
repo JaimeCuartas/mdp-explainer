@@ -17,6 +17,7 @@ export interface MDPTransition {
     actionId: string;
     targetStateId: string;
     probability: number;
+    reward?: number;
 }
 
 export interface CausalityMetrics {

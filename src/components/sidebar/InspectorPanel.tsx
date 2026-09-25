@@ -140,6 +140,10 @@ export function InspectorPanel({
       onUpdateTransition(selectedTransition.id, { probability: Number(event.target.value) });
     };
 
+    const handleRewardChange = (event: ChangeEvent<HTMLInputElement>) => {
+      onUpdateTransition(selectedTransition.id, { reward: Number(event.target.value) });
+    };
+
     const handleActionLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
       if (action) {
         onUpdateAction(action.id, { label: event.target.value });
@@ -167,6 +171,11 @@ export function InspectorPanel({
         <label className="inspector-field">
           <span>Probability</span>
           <input type="number" min={0} max={1} step={0.01} value={selectedTransition.probability} onChange={handleProbabilityChange} />
+        </label>
+
+        <label className="inspector-field">
+          <span>Reward</span>
+          <input type="number" step={1} value={selectedTransition.reward ?? 0} onChange={handleRewardChange} />
         </label>
 
         <button type="button" className="action-button danger" onClick={() => onDeleteTransition(selectedTransition.id)}>

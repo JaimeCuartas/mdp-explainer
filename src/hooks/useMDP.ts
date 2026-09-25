@@ -84,22 +84,22 @@ export function useMDP() {
   }, []);
 
   const addTransition = useCallback(
-    (actionId: string, targetStateId: string, probability: number): string => {
+    (actionId: string, targetStateId: string, probability: number, reward = 0): string => {
       const id = generateId('t');
-      setTransitions((prev) => [...prev, { id, actionId, targetStateId, probability }]);
+      setTransitions((prev) => [...prev, { id, actionId, targetStateId, probability, reward }]);
       return id;
     },
     []
   );
 
   const addStateWithAction = useCallback(
-    (sourceActionId: string, position: NodePosition, probability = 1): string => {
+    (sourceActionId: string, position: NodePosition, probability = 1, reward = 0): string => {
       const id = generateId('s');
       setStates((prev) => [...prev, { id, label: 's' }]);
       setNodePositions((prev) => ({ ...prev, [id]: position }));
       setTransitions((prev) => [
         ...prev,
-        { id: generateId('t'), actionId: sourceActionId, targetStateId: id, probability },
+        { id: generateId('t'), actionId: sourceActionId, targetStateId: id, probability, reward },
       ]);
       return id;
     },
