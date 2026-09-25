@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
+import { InlineMath } from 'react-katex';
 import type { NodeSize } from '../../hooks/useMDP';
 
 const MIN_NODE_SIZE = 44;
@@ -30,7 +31,7 @@ function StateNodeComponent({ data, selected }: NodeProps<StateFlowNode>) {
       />
       <Handle type="target" position={Position.Top} />
       <div className="state-node-circle" style={{ background, border }}>
-        {data.label}
+        <InlineMath math={data.label} />
       </div>
       <Handle type="source" position={Position.Bottom} />
     </>

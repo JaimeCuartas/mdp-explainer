@@ -22,6 +22,7 @@ import type {
   OnEdgesDelete,
   IsValidConnection,
   NodeTypes,
+  EdgeTypes,
 } from '@xyflow/react';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
 import type { NodePosition, NodeSize } from '../../hooks/useMDP';
@@ -29,13 +30,19 @@ import { StateNode } from './StateNode';
 import type { StateFlowNode } from './StateNode';
 import { ActionNode } from './ActionNode';
 import type { ActionFlowNode } from './ActionNode';
+import { ActionEdge } from './ActionEdge';
+import type { ActionFlowEdge } from './ActionEdge';
+import { TransitionEdge } from './TransitionEdge';
+import type { TransitionFlowEdge } from './TransitionEdge';
 
 type FlowNode = StateFlowNode | ActionFlowNode;
+type FlowEdge = ActionFlowEdge | TransitionFlowEdge;
 
 const nodeTypes: NodeTypes = { state: StateNode, action: ActionNode };
+const edgeTypes: EdgeTypes = { action: ActionEdge, transition: TransitionEdge };
 const DEFAULT_NODE_SIZE: NodeSize = { width: 44, height: 44 };
 const ACTION_NODE_SIZE: NodeSize = { width: 16, height: 16 };
-const STRUCTURAL_EDGE_PREFIX = 'sa-';
+const ACTION_EDGE_PREFIX = 'sa-';
 const SELECTION_COLOR = '#2563eb';
 
 interface MDPFlowCanvasProps {
@@ -121,39 +128,38 @@ function buildEdges(
   transitions: MDPTransition[],
   selectedActionId: string | null,
   selectedTransitionId: string | null
-): Edge[] {
-  const stateToActionEdges: Edge[] = actions.map((action) => {
+): FlowEdge[] {
+  const stateToActionEdges: ActionFlowEdge[] = actions.map((action) => {
     const isSelected = action.id === selectedActionId;
     return {
-      id: `${STRUCTURAL_EDGE_PREFIX}${action.id}`,
+      id: `${ACTION_EDGE_PREFIX}${action.id}`,
       source: action.sourceStateId,
       target: action.id,
-      type: 'straight',
+      type: 'action',
       selectable: false,
       deletable: false,
       selected: isSelected,
-      label: action.label,
-      labelBgStyle: { fill: '#f9fafb' },
-      className: 'structural-edge',
+      className: 'action-edge',
       style: {
         stroke: isSelected ? SELECTION_COLOR : '#94a3b8',
         strokeWidth: isSelected ? 2 : 1,
       },
+      data: { label: action.label },
     };
   });
 
-  const actionToStateEdges: Edge[] = transitions.map((transition) => {
+  const actionToStateEdges: TransitionFlowEdge[] = transitions.map((transition) => {
     const isSelected = transition.id === selectedTransitionId;
     return {
       id: transition.id,
       source: transition.actionId,
       target: transition.targetStateId,
-      label: `p=${transition.probability}`,
+      type: 'transition',
       animated: true,
       selected: isSelected,
       style: { stroke: isSelected ? SELECTION_COLOR : '#000000', strokeWidth: isSelected ? 2 : 1 },
       markerEnd: { type: MarkerType.ArrowClosed, color: isSelected ? SELECTION_COLOR : '#000000' },
-      labelBgStyle: { fill: '#f9fafb' },
+      data: { probability: transition.probability },
     };
   });
 
@@ -218,7 +224,7 @@ function FlowCanvasInner({
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(builtNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(builtEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(builtEdges);
 
   useEffect(() => setNodes(builtNodes), [builtNodes, setNodes]);
   useEffect(() => setEdges(builtEdges), [builtEdges, setEdges]);
@@ -247,8 +253,8 @@ function FlowCanvasInner({
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_event, edge) => {
-      if (edge.id.startsWith(STRUCTURAL_EDGE_PREFIX)) {
-        onSelectAction(edge.id.slice(STRUCTURAL_EDGE_PREFIX.length));
+      if (edge.id.startsWith(ACTION_EDGE_PREFIX)) {
+        onSelectAction(edge.id.slice(ACTION_EDGE_PREFIX.length));
         return;
       }
       onSelectTransition(edge.id);
@@ -359,6 +365,7 @@ function FlowCanvasInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={handleNodeDragStop}

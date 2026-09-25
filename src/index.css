@@ -56,7 +56,7 @@ body, html, #root {
 
 /* Restores the pointer cursor React Flow normally gives .selectable edges,
    which we opted out of on purpose so it doesn't fight our own selection state. */
-.react-flow__edge.structural-edge {
+.react-flow__edge.action-edge {
   cursor: pointer;
 }
 
