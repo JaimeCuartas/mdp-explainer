@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { Trash2 } from 'lucide-react';
+import { InlineMath } from 'react-katex';
 import { MIN_NODE_SIZE } from '../../hooks/useMDP';
 import type { NodeSize } from '../../hooks/useMDP';
 import type { MDPState, MDPAction, MDPTransition } from '../../types/mdp';
@@ -61,16 +62,6 @@ export function InspectorPanel({
           <input type="text" value={selectedState.label} onChange={handleLabelChange} />
         </label>
 
-        <label className="inspector-field">
-          <span>Width</span>
-          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.width ?? MIN_NODE_SIZE} onChange={handleWidthChange} />
-        </label>
-
-        <label className="inspector-field">
-          <span>Height</span>
-          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.height ?? MIN_NODE_SIZE} onChange={handleHeightChange} />
-        </label>
-
         <label className="inspector-checkbox">
           <input
             type="checkbox"
@@ -98,6 +89,16 @@ export function InspectorPanel({
           <span>Target Effect</span>
         </label>
 
+        <label className="inspector-field">
+          <span>Width</span>
+          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.width ?? MIN_NODE_SIZE} onChange={handleWidthChange} />
+        </label>
+
+        <label className="inspector-field">
+          <span>Height</span>
+          <input type="number" min={MIN_NODE_SIZE} value={stateSize?.height ?? MIN_NODE_SIZE} onChange={handleHeightChange} />
+        </label>
+
         <button type="button" className="action-button danger" onClick={() => onDeleteState(selectedState.id)}>
           <Trash2 size={16} /> Delete State
         </button>
@@ -122,7 +123,7 @@ export function InspectorPanel({
         </label>
 
         <p className="inspector-meta">
-          Source State: {sourceState ? sourceState.label : selectedAction.sourceStateId}
+          Source: {sourceState ? sourceState.label : selectedAction.sourceStateId}
         </p>
 
         <button type="button" className="action-button danger" onClick={() => onDeleteAction(selectedAction.id)}>
@@ -134,6 +135,7 @@ export function InspectorPanel({
 
   if (selectedTransition) {
     const action = actions.find((a) => a.id === selectedTransition.actionId);
+    const sourceState = action ? states.find((s) => s.id === action.sourceStateId) : undefined;
     const targetState = states.find((s) => s.id === selectedTransition.targetStateId);
 
     const handleProbabilityChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +157,11 @@ export function InspectorPanel({
         <h3>Transition Inspector</h3>
 
         <p className="inspector-meta">
-          Target: {targetState ? targetState.label : selectedTransition.targetStateId}
+          Source: <InlineMath math={sourceState ? sourceState.label : (action?.sourceStateId ?? 'Unknown')} />
+        </p>
+
+        <p className="inspector-meta">
+          Target: <InlineMath math={targetState ? targetState.label : selectedTransition.targetStateId} />
         </p>
 
         <label className="inspector-field">
