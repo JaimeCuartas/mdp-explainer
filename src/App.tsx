@@ -44,8 +44,12 @@ function App() {
   const selectedAction = actions.find((action) => action.id === selectedActionId) ?? null;
   const selectedTransition = transitions.find((transition) => transition.id === selectedTransitionId) ?? null;
 
-  const handleSave = useCallback(() => {
-    exportMDPToFile(states, actions, transitions, nodePositions, title, nodeSizes, actionPositions);
+  const handleSave = useCallback(async () => {
+    try {
+      await exportMDPToFile(states, actions, transitions, nodePositions, title, nodeSizes, actionPositions);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to save the MDP file.');
+    }
   }, [states, actions, transitions, nodePositions, title, nodeSizes, actionPositions]);
 
   const handleOpen = useCallback(

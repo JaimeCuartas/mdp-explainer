@@ -1,0 +1,308 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "title": "System Load MDP",
+    "updatedAt": "2026-09-29T06:30:53.374Z"
+  },
+  "logical": {
+    "states": [
+      {
+        "id": "s0",
+        "label": "s_0",
+        "isInitial": true
+      },
+      {
+        "id": "highload",
+        "label": "\\text{highload}"
+      },
+      {
+        "id": "crash",
+        "label": "\\text{crash}"
+      },
+      {
+        "id": "memory_leak",
+        "label": "\\text{Memory leak}"
+      },
+      {
+        "id": "safe_mode",
+        "label": "\\text{Safe mode}",
+        "isTargetEffect": true
+      }
+    ],
+    "actions": [
+      {
+        "id": "a_s0_accept_all",
+        "label": "accept\\,all",
+        "sourceStateId": "s0"
+      },
+      {
+        "id": "a_s0_filter",
+        "label": "filter",
+        "sourceStateId": "s0"
+      },
+      {
+        "id": "a_highload_ignore",
+        "label": "\\text{ignore}",
+        "sourceStateId": "highload"
+      },
+      {
+        "id": "a_memory_leak_reboot",
+        "label": "\\text{reboot}",
+        "sourceStateId": "memory_leak"
+      },
+      {
+        "id": "a_memory_leak_garbage_collector",
+        "label": "\\text{garbage\\_collector}",
+        "sourceStateId": "memory_leak"
+      },
+      {
+        "id": "a_safe_mode_mantain",
+        "label": "\\text{mantain}",
+        "sourceStateId": "safe_mode"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "t1",
+        "actionId": "a_s0_accept_all",
+        "targetStateId": "s0",
+        "probability": 0.7,
+        "waypoints": [
+          {
+            "x": 373.11414632002777,
+            "y": 81.368025199183
+          }
+        ]
+      },
+      {
+        "id": "t2",
+        "actionId": "a_s0_accept_all",
+        "targetStateId": "highload",
+        "probability": 0.2
+      },
+      {
+        "id": "t3",
+        "actionId": "a_s0_accept_all",
+        "targetStateId": "crash",
+        "probability": 0.1
+      },
+      {
+        "id": "t4",
+        "actionId": "a_s0_filter",
+        "targetStateId": "s0",
+        "probability": 0.9,
+        "waypoints": [
+          {
+            "x": 151.55021772800208,
+            "y": 77.41958451653483
+          }
+        ]
+      },
+      {
+        "id": "t5",
+        "actionId": "a_s0_filter",
+        "targetStateId": "highload",
+        "probability": 0.1
+      },
+      {
+        "id": "t6",
+        "actionId": "a_highload_ignore",
+        "targetStateId": "crash",
+        "probability": 0.3
+      },
+      {
+        "id": "t7",
+        "actionId": "a_highload_ignore",
+        "targetStateId": "memory_leak",
+        "probability": 0.5
+      },
+      {
+        "id": "t8",
+        "actionId": "a_highload_ignore",
+        "targetStateId": "safe_mode",
+        "probability": 0.2
+      },
+      {
+        "id": "t9",
+        "actionId": "a_memory_leak_reboot",
+        "targetStateId": "s0",
+        "probability": 0.3,
+        "waypoints": [
+          {
+            "x": 50.470136252210295,
+            "y": 26.315480823974983
+          },
+          {
+            "x": 151.55021772800205,
+            "y": 27.21798155143741
+          }
+        ]
+      },
+      {
+        "id": "t10",
+        "actionId": "a_memory_leak_reboot",
+        "targetStateId": "crash",
+        "probability": 0.7,
+        "waypoints": [
+          {
+            "x": 49.11638516101665,
+            "y": -12.943300820640568
+          },
+          {
+            "x": 411.9216776009121,
+            "y": -9.333297910790861
+          }
+        ]
+      },
+      {
+        "id": "t11",
+        "actionId": "a_memory_leak_garbage_collector",
+        "targetStateId": "s0",
+        "probability": 0.3,
+        "waypoints": [
+          {
+            "x": 610.6974628245115,
+            "y": 253.74566414450646
+          },
+          {
+            "x": 609.3437117333178,
+            "y": 83.62427701783906
+          }
+        ]
+      },
+      {
+        "id": "t12",
+        "actionId": "a_memory_leak_garbage_collector",
+        "targetStateId": "crash",
+        "probability": 0.7,
+        "waypoints": [
+          {
+            "x": 610.2462124607803,
+            "y": 306.5419567010584
+          }
+        ]
+      },
+      {
+        "id": "t13",
+        "actionId": "a_safe_mode_mantain",
+        "targetStateId": "s0",
+        "probability": 0.9,
+        "waypoints": [
+          {
+            "x": 529.9236477166244,
+            "y": 265.0269232377868
+          },
+          {
+            "x": 531.277398807818,
+            "y": 83.62427701783906
+          }
+        ]
+      },
+      {
+        "id": "t14",
+        "actionId": "a_safe_mode_mantain",
+        "targetStateId": "crash",
+        "probability": 0.1,
+        "waypoints": [
+          {
+            "x": 531.7286491715493,
+            "y": 304.28570488240234
+          }
+        ]
+      }
+    ]
+  },
+  "graphical": {
+    "nodes": {
+      "s0": {
+        "id": "s0",
+        "position": {
+          "x": 225.6015990312469,
+          "y": 83.46320138447065
+        }
+      },
+      "highload": {
+        "id": "highload",
+        "position": {
+          "x": 110.10668509111122,
+          "y": 299.7712094963793
+        },
+        "size": {
+          "width": 86,
+          "height": 50
+        }
+      },
+      "crash": {
+        "id": "crash",
+        "position": {
+          "x": 386.20668550981105,
+          "y": 308.9232016103414
+        }
+      },
+      "memory_leak": {
+        "id": "memory_leak",
+        "position": {
+          "x": 92.26826824435446,
+          "y": 548.9530147089209
+        },
+        "size": {
+          "width": 120,
+          "height": 50
+        }
+      },
+      "safe_mode": {
+        "id": "safe_mode",
+        "position": {
+          "x": 364.9866916700016,
+          "y": 495.34030121675517
+        },
+        "size": {
+          "width": 100,
+          "height": 50
+        }
+      },
+      "a_s0_accept_all": {
+        "id": "a_s0_accept_all",
+        "position": {
+          "x": 362.5347151265936,
+          "y": 177.83655426738244
+        }
+      },
+      "a_s0_filter": {
+        "id": "a_s0_filter",
+        "position": {
+          "x": 144.64496520521448,
+          "y": 175.08852631816103
+        }
+      },
+      "a_highload_ignore": {
+        "id": "a_highload_ignore",
+        "position": {
+          "x": 146.61197185794944,
+          "y": 433.3573513285167
+        }
+      },
+      "a_memory_leak_reboot": {
+        "id": "a_memory_leak_reboot",
+        "position": {
+          "x": 41.94797097856836,
+          "y": 603.834448796248
+        }
+      },
+      "a_memory_leak_garbage_collector": {
+        "id": "a_memory_leak_garbage_collector",
+        "position": {
+          "x": 602.6526068775432,
+          "y": 608.4010834052649
+        }
+      },
+      "a_safe_mode_mantain": {
+        "id": "a_safe_mode_mantain",
+        "position": {
+          "x": 522.7450794075763,
+          "y": 553.0797658821441
+        }
+      }
+    }
+  }
+}
