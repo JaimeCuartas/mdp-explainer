@@ -78,6 +78,9 @@ body, html, #root {
 .sidebar {
   width: 340px;
   height: 100%;
+  /* Flex items default to min-height: auto, which lets their content grow
+     past 100% instead of triggering this overflow's scrollbar. */
+  min-height: 0;
   background-color: #ffffff;
   border-left: 1px solid #e5e7eb;
   padding: 20px;
@@ -91,6 +94,7 @@ body, html, #root {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .mdp-title-input {
@@ -152,6 +156,7 @@ body, html, #root {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .hidden-file-input {
@@ -166,6 +171,7 @@ body, html, #root {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .inspector-panel h3 {
@@ -210,6 +216,11 @@ body, html, #root {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  /* Flex children of .sidebar default to flex-shrink: 1, which would let the
+     browser shrink this section (silently clipping it, since it has its own
+     overflow: hidden) to make everything fit, instead of letting .sidebar
+     overflow and scroll as a whole. */
+  flex-shrink: 0;
 }
 
 .accordion-toggle {
