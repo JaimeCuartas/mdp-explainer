@@ -206,3 +206,38 @@ body, html, #root {
   color: #6b7280;
 }
 
+.accordion-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background-color: #f3f4f6;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.accordion-chevron {
+  transition: transform 0.2s ease;
+}
+
+.accordion-chevron--open {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+

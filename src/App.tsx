@@ -3,6 +3,8 @@ import { Activity } from 'lucide-react';
 import { MDPFlowCanvas } from './components/canvas/MDPFlowCanvas';
 import { ToolbarPanel } from './components/sidebar/ToolbarPanel';
 import { InspectorPanel } from './components/sidebar/InspectorPanel';
+import { PoliciesPanel } from './components/sidebar/PoliciesPanel';
+import { ProbabilitiesPanel } from './components/sidebar/ProbabilitiesPanel';
 import { useMDP, DEFAULT_NODE_SIZE } from './hooks/useMDP';
 import { exportMDPToFile, importMDPFromFile } from './core/serializers/jsonSerializer';
 
@@ -173,6 +175,20 @@ function App() {
         </div>
 
         <ToolbarPanel onSave={handleSave} onOpen={handleOpen} onReset={handleReset} />
+
+        <PoliciesPanel
+          states={states}
+          actions={actions}
+          transitions={transitions}
+          selectedStateId={selectedStateId}
+        />
+
+        <ProbabilitiesPanel
+          states={states}
+          actions={actions}
+          transitions={transitions}
+          selectedStateId={selectedStateId}
+        />
 
         <InspectorPanel
           selectedState={selectedState}
