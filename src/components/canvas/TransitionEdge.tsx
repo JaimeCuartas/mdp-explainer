@@ -32,6 +32,10 @@ function getDefaultControlPoint(sourceX: number, sourceY: number, targetX: numbe
   return { x: midX + perpX * offset, y: midY + perpY * offset };
 }
 
+function midpoint(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
 function distanceToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
   const dx = bx - ax;
   const dy = by - ay;
@@ -70,7 +74,8 @@ export function TransitionEdge({
   if (hasWaypoints) {
     const points = [{ x: sourceX, y: sourceY }, ...displayWaypoints, { x: targetX, y: targetY }];
     path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
-    labelPoint = displayWaypoints[Math.floor((displayWaypoints.length - 1) / 2)];
+    const labelIndex = Math.floor(displayWaypoints.length / 2);
+    labelPoint = midpoint(points[labelIndex], points[labelIndex + 1]);
   } else {
     const control = getDefaultControlPoint(sourceX, sourceY, targetX, targetY, data?.defaultCurveOffset ?? 0);
     path = `M${sourceX},${sourceY} Q${control.x},${control.y} ${targetX},${targetY}`;
