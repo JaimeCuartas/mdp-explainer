@@ -18,6 +18,7 @@ export interface MDPTransition {
     targetStateId: string;
     probability: number;
     reward?: number;
+    waypoints?: { x: number; y: number }[];
 }
 
 export interface CausalityMetrics {

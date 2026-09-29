@@ -157,6 +157,7 @@ function App() {
         onDeleteState={handleDeleteState}
         onDeleteAction={handleDeleteAction}
         onDeleteTransition={handleDeleteTransition}
+        onUpdateTransition={updateTransition}
       />
 
       <aside className="sidebar">

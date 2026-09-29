@@ -71,6 +71,7 @@ interface MDPFlowCanvasProps {
   onDeleteState: (stateId: string) => void;
   onDeleteAction: (actionId: string) => void;
   onDeleteTransition: (transitionId: string) => void;
+  onUpdateTransition: (transitionId: string, updates: Partial<MDPTransition>) => void;
 }
 
 function buildStateNodes(
@@ -132,7 +133,8 @@ function buildEdges(
   actions: MDPAction[],
   transitions: MDPTransition[],
   selectedActionId: string | null,
-  selectedTransitionId: string | null
+  selectedTransitionId: string | null,
+  onUpdateTransition: (transitionId: string, updates: Partial<MDPTransition>) => void
 ): FlowEdge[] {
   const stateToActionEdges: ActionFlowEdge[] = actions.map((action) => {
     const isSelected = action.id === selectedActionId;
@@ -168,7 +170,7 @@ function buildEdges(
     const isSelected = transition.id === selectedTransitionId;
     const group = transitionGroups.get(`${transition.actionId}::${transition.targetStateId}`) ?? [transition];
     const indexInGroup = group.findIndex((groupTransition) => groupTransition.id === transition.id);
-    const curveOffset = (indexInGroup - (group.length - 1) / 2) * TRANSITION_CURVE_SPACING;
+    const defaultCurveOffset = (indexInGroup - (group.length - 1) / 2) * TRANSITION_CURVE_SPACING;
 
     return {
       id: transition.id,
@@ -177,9 +179,20 @@ function buildEdges(
       type: 'transition',
       animated: true,
       selected: isSelected,
+      // Edges and nodes both default to zIndex 0, so nodes (rendered after edges in the
+      // DOM) normally paint on top and would swallow clicks/drags on the bend handles.
+      // Selecting the edge is exactly when those handles need to be grabbable, so lift
+      // it above nodes only then.
+      zIndex: isSelected ? 1000 : undefined,
       style: { stroke: isSelected ? SELECTION_COLOR : '#000000', strokeWidth: isSelected ? 2 : 1 },
       markerEnd: { type: MarkerType.ArrowClosed, color: isSelected ? SELECTION_COLOR : '#000000' },
-      data: { probability: transition.probability, reward: transition.reward ?? 0, curveOffset },
+      data: {
+        probability: transition.probability,
+        reward: transition.reward ?? 0,
+        defaultCurveOffset,
+        waypoints: transition.waypoints ?? [],
+        onWaypointsChange: (waypoints: NodePosition[]) => onUpdateTransition(transition.id, { waypoints }),
+      },
     };
   });
 
@@ -225,6 +238,7 @@ function FlowCanvasInner({
   onDeleteState,
   onDeleteAction,
   onDeleteTransition,
+  onUpdateTransition,
 }: MDPFlowCanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
 
@@ -249,8 +263,8 @@ function FlowCanvasInner({
     ]
   );
   const builtEdges = useMemo(
-    () => buildEdges(actions, transitions, selectedActionId, selectedTransitionId),
-    [actions, transitions, selectedActionId, selectedTransitionId]
+    () => buildEdges(actions, transitions, selectedActionId, selectedTransitionId, onUpdateTransition),
+    [actions, transitions, selectedActionId, selectedTransitionId, onUpdateTransition]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(builtNodes);

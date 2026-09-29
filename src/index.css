@@ -60,6 +60,21 @@ body, html, #root {
   cursor: pointer;
 }
 
+.transition-edge-bend-handle {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  cursor: grab;
+  /* The parent .react-flow__edge sets pointer-events: visibleStroke, which would
+     otherwise make only this circle's thin stroke ring clickable instead of its
+     whole filled area. */
+  pointer-events: all;
+}
+
+.transition-edge-bend-handle:active {
+  cursor: grabbing;
+}
+
 .sidebar {
   width: 340px;
   height: 100%;
