@@ -48,7 +48,7 @@ export function PoliciesPanel({ states, actions, transitions, selectedStateId }:
         (selectedState ? (
           bestAction ? (
             <p className="inspector-meta">
-              <InlineMath math={`\\phi(${selectedState.label}) = ${bestAction.label}`} />
+              <InlineMath math={`\\pi(${selectedState.label}) = ${bestAction.label}`} />
             </p>
           ) : (
             <p className="inspector-meta">No action is available from this state.</p>
