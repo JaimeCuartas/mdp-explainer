@@ -2,6 +2,9 @@
 name = "mdp-explainer-wasm"
 version = "0.1.0"
 edition = "2024"
+description = "WebAssembly bindings for the mdp-explainer"
+readme = "README.md"
+publish = false
 
 [lib]
 crate-type = ["cdylib"]
