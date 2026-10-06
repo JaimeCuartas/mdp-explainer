@@ -201,16 +201,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
 
 [[package]]
-name = "mdp-explainer-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "mdp-explainer-core",
- "serde_json",
-]
-
-[[package]]
-name = "mdp-explainer-core"
+name = "mdp-explainer"
 version = "0.1.0"
 dependencies = [
  "rayon",
@@ -219,10 +210,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mdp-explainer-cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "mdp-explainer",
+ "serde_json",
+]
+
+[[package]]
 name = "mdp-explainer-python"
 version = "0.1.0"
 dependencies = [
- "mdp-explainer-core",
+ "mdp-explainer",
  "pyo3",
  "serde_json",
 ]
@@ -231,7 +231,7 @@ dependencies = [
 name = "mdp-explainer-wasm"
 version = "0.1.0"
 dependencies = [
- "mdp-explainer-core",
+ "mdp-explainer",
  "serde-wasm-bindgen",
  "wasm-bindgen",
 ]
