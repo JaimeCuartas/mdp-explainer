@@ -2,7 +2,7 @@
 name = "mdp-explainer"
 version = "0.1.0"
 edition = "2024"
-description = "High-performance Markov Decision Process solver and parser engine."
+description = "Markov Decision Process solver"
 license = "MIT"
 repository = "https://github.com/JaimeCuartas/mdp-explainer-core"
 readme = "README.md"
