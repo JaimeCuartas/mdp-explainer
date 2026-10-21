@@ -1,13 +1,16 @@
 [package]
 name = "mdp-explainer"
-version = "0.1.1"
-edition = "2024"
 description = "Markov Decision Process solver"
-license = "MIT"
-repository = "https://github.com/JaimeCuartas/mdp-explainer-core"
-readme = "README.md"
+readme = { workspace = true }
+license = { workspace = true }
+version = { workspace = true }
+edition = { workspace = true }
+repository = { workspace = true }
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rayon = "1.8"
+
+[lints]
+workspace = true
+

@@ -1,16 +1,20 @@
 [package]
 name = "mdp-explainer-wasm"
-version = "0.1.0"
-edition = "2024"
 description = "WebAssembly bindings for the mdp-explainer"
-readme = "README.md"
 publish = false
+license = { workspace = true }
+version = { workspace = true }
+edition = { workspace = true }
+readme = {workspace = true }
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-mdp-explainer = {path = "../core" }
+mdp-explainer = { workspace = true }
 wasm-bindgen = "0.2"
 serde-wasm-bindgen = "0.6"
+
+[lints]
+workspace = true
 

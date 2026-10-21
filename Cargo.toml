@@ -7,8 +7,26 @@ members = [
     "crates/python",
 ]
 
+[workspace.package]
+license = "MIT"
+repository = "https://github.com/JaimeCuartas/mdp-explainer"
+version = "0.1.1"
+edition = "2024"
+readme = "README.md"
+
+[workspace.dependencies]
+mdp-explainer = { path = "crates/core", version = "0.1.1" }
+
+[workspace.lints.clippy]
+#Report everything that can be concerning as warning
+pedantic = { level = "warn", priority = -1 }
+
 [profile.release]
+#speed over size
 opt-level = 3
-lto = "thin"
+#Optimization across csate boundaries
+lto = true
+# Optimization over speed of compilation
 codegen-units = 1
-panic = "abort"
+#Size of compilation over readability on errors
+strip = true
