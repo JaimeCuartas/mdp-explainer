@@ -7,7 +7,7 @@ pub enum ModelError {
     UnknownInitialState(String),
     UnknownSourceState {action: String, state: String },
     UNknownAction { transition: String, action: String },
-    UnknownTargetState { transition: String, action: String },
+    UnknownTargetState { transition: String, state: String },
 
     InvalidProbability,
     InvalidReward,
