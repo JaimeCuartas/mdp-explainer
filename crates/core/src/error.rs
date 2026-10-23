@@ -9,8 +9,8 @@ pub enum ModelError {
     UNknownAction { transition: String, action: String },
     UnknownTargetState { transition: String, state: String },
 
-    InvalidProbability,
-    InvalidReward,
+    InvalidProbability { transition: String, value: f64 },
+    InvalidReward { transition: String, value: f64 },
 
     Overflow,
 }
