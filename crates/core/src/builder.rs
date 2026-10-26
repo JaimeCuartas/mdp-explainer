@@ -29,6 +29,12 @@ impl State {
             is_target_effect: false,
         }
     }
+
+    #[must_use]
+    pub fn effect(mut self, is_effect: bool) -> Self {
+        self.is_target_effect = is_effect;
+        self
+    }
 }
 
 impl Action {
@@ -60,6 +66,12 @@ impl Transition {
             reward: 0.0,
         }
     }
+
+    #[must_use]
+    pub fn reward(mut self, new_reward: f64) -> Self {
+        self.reward = new_reward;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -71,20 +83,15 @@ pub struct MdpBuilder {
 }
 
 impl MdpBuilder {
+    #[must_use]
     pub fn new() -> Self {
-        Self {
-            states: Vec::new(),
-            actions: Vec::new(),
-            transitions: Vec::new(),
-            initial: None,
-        }
+        Self::default()
     }
 
     pub fn add_state(&mut self, s: State) -> &mut Self {
         self.states.push(s);
         self
     }
-
 
     pub fn add_action(&mut self, a: Action) -> &mut Self {
         self.actions.push(a);
@@ -96,8 +103,8 @@ impl MdpBuilder {
         self
     }
 
-    pub fn set_initial(&mut self, initial: impl Into<String>) -> &mut Self {
-        self.initial = Some(initial.into());
+    pub fn set_initial(&mut self, initial_id: impl Into<String>) -> &mut Self {
+        self.initial = Some(initial_id.into());
         self
     }
 }

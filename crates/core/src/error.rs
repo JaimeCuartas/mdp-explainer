@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum ModelError {
     #[error("The state id {0} already exist")]
@@ -12,7 +14,7 @@ pub enum ModelError {
     #[error("The action {action} with the source state {state} was not found")]
     UnknownSourceState { action: String, state: String },
     #[error("The action {action} to the transition {transition} was not found")]
-    UNknownAction { transition: String, action: String },
+    UnknownAction { transition: String, action: String },
     #[error("The transition {transition} with the target state {state} was not found")]
     UnknownTargetState { transition: String, state: String },
 
@@ -29,4 +31,17 @@ pub enum ModelError {
 pub enum Warning {
     ProbabilitySum { action: String, sum: f64 },
     PolicySum { state: String, sum: f64 },
+}
+
+impl fmt::Display for Warning {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Warning::ProbabilitySum { action, sum } => {
+                write!(f, "Action{action} is summing up {sum}")
+            }
+            Warning::PolicySum { state, sum } => {
+                write!(f, "The policy at state {state} is summing up {sum}")
+            }
+        }
+    }
 }
