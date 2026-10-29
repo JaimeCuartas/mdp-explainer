@@ -5,4 +5,4 @@ mod error;
 pub use error::{ModelError, Warning};
 
 mod mdp;
-pub use mdp::{ActionIdx, Mdp, StateIdx};
+pub use mdp::{ActionIdx, Mdp, MdpMetadata, StateIdx};

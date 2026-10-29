@@ -1,3 +1,6 @@
+use crate::error::ModelError;
+use crate::mdp::{Mdp, MdpMetadata};
+
 #[derive(Debug, Clone)]
 pub struct State {
     pub id: String,
@@ -17,7 +20,7 @@ pub struct Transition {
     pub action_id: String,
     pub target_state_id: String,
     pub probability: f64,
-    pub reward: f64,
+    pub reward: i32,
 }
 
 impl State {
@@ -55,12 +58,12 @@ impl Transition {
             action_id: action_id.into(),
             target_state_id: target_state_id.into(),
             probability,
-            reward: 0.0,
+            reward: 0,
         }
     }
 
     #[must_use]
-    pub fn reward(mut self, new_reward: f64) -> Self {
+    pub fn reward(mut self, new_reward: i32) -> Self {
         self.reward = new_reward;
         self
     }
@@ -78,6 +81,12 @@ impl MdpBuilder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// # Errors
+    /// If the mdp is not consistent
+    pub fn build(self) -> Result<(Mdp, MdpMetadata), ModelError> {
+        Mdp::from_builder(self)
     }
 
     pub fn add_state(&mut self, s: State) -> &mut Self {
@@ -105,17 +114,23 @@ impl MdpBuilder {
 mod tests {
     use super::*;
 
+    /// The model of `fixtures/models/example.mdp.json`, nested.
     fn example() -> MdpBuilder {
         let mut builder = MdpBuilder::new();
-        builder
-            .add_state(State::new("s0", "ok"))
-            .add_state(State::new("s1", "broken"))
-            .add_action(Action::new("a0", "run", "s0"))
-            .add_action(Action::new("a1", "repair", "s0"))
-            .add_transition(Transition::new("t0", "a0", "s0", 0.9).reward(2.0))
-            .add_transition(Transition::new("t1", "a0", "s1", 0.1))
-            .add_transition(Transition::new("t2", "a1", "s0", 1.0).reward(-1.0))
-            .set_initial("s0");
+        builder.add_state(
+            State::new("s0", "ok")
+                .action(
+                    Action::new("a0", "run")
+                        .transition(Transition::new("t0", "s0", 0.9).reward(2))
+                        .transition(Transition::new("t1", "s1", 0.1)),
+                )
+                .action(
+                    Action::new("a1", "repair")
+                        .transition(Transition::new("t2", "s0", 1.0).reward(-1)),
+                ),
+        );
+        builder.add_state(State::new("s1", "broken"));
+        builder.set_initial("s0");
         builder
     }
 
@@ -134,8 +149,6 @@ mod tests {
     fn new_builder_is_empty() {
         let builder = MdpBuilder::new();
         assert!(builder.states.is_empty());
-        assert!(builder.actions.is_empty());
-        assert!(builder.transitions.is_empty());
         assert_eq!(builder.initial, None);
     }
 
@@ -144,56 +157,118 @@ mod tests {
         let state = State::new("s0", "ok");
         assert_eq!(state.id, "s0");
         assert_eq!(state.label, "ok");
+        assert!(state.actions.is_empty());
 
-        let action = Action::new("a0", "run", "s0");
+        let action = Action::new("a0", "run");
         assert_eq!(action.id, "a0");
         assert_eq!(action.label, "run");
-        assert_eq!(action.source_state_id, "s0");
+        assert!(action.transitions.is_empty());
 
-        let transition = Transition::new("t0", "a0", "s1", 0.5);
+        let transition = Transition::new("t0", "s1", 0.5);
         assert_eq!(transition.id, "t0");
-        assert_eq!(transition.action_id, "a0");
         assert_eq!(transition.target_state_id, "s1");
         assert_close(transition.probability, 0.5);
-        assert_close(transition.reward, 0.0);
+        assert_eq!(transition.reward, 0);
     }
 
     #[test]
-    fn setters_change_one_field() {
-        let transition = Transition::new("t0", "a0", "s1", 0.5).reward(-3.5);
-        assert_close(transition.reward, -3.5);
+    fn setters_nest_in_order() {
+        let state = State::new("s0", "ok")
+            .action(
+                Action::new("a0", "run")
+                    .transition(Transition::new("t0", "s0", 0.5))
+                    .transition(Transition::new("t1", "s1", 0.5)),
+            )
+            .action(Action::new("a1", "wait"));
+        assert_eq!(ids(&state.actions, |a| &a.id), ["a0", "a1"]);
+        assert_eq!(ids(&state.actions[0].transitions, |t| &t.id), ["t0", "t1"]);
+        assert!(state.actions[1].transitions.is_empty());
+    }
+
+    #[test]
+    fn reward_setter_changes_only_the_reward() {
+        let transition = Transition::new("t0", "s1", 0.5).reward(-3);
+        assert_eq!(transition.reward, -3);
         assert_close(transition.probability, 0.5);
     }
 
     #[test]
-    fn builder_keeps_insertion_order() {
+    fn example_has_the_fixture_shape() {
         let builder = example();
         assert_eq!(ids(&builder.states, |s| &s.id), ["s0", "s1"]);
-        assert_eq!(ids(&builder.actions, |a| &a.id), ["a0", "a1"]);
-        assert_eq!(ids(&builder.transitions, |t| &t.id), ["t0", "t1", "t2"]);
+        assert_eq!(ids(&builder.states[0].actions, |a| &a.id), ["a0", "a1"]);
+        assert_eq!(builder.states[0].actions[0].transitions[0].reward, 2);
+        assert!(builder.states[1].actions.is_empty());
         assert_eq!(builder.initial.as_deref(), Some("s0"));
     }
 
     #[test]
-    fn elements_may_be_added_in_any_order() {
-        // transition before its action
+    fn add_state_returns_a_handle_per_state() {
         let mut builder = MdpBuilder::new();
+        let s0 = builder.add_state(State::new("s0", "ok"));
+        let s1 = builder.add_state(State::new("s1", "broken"));
+        assert_ne!(s0, s1);
+        assert_eq!(ids(&builder.states, |s| &s.id), ["s0", "s1"]);
+    }
+
+    #[test]
+    fn add_action_appends_to_that_state() {
+        let mut builder = MdpBuilder::new();
+        let s0 = builder.add_state(State::new("s0", "ok").action(Action::new("a0", "run")));
+        let s1 = builder.add_state(State::new("s1", "broken"));
         builder
-            .add_transition(Transition::new("t0", "a0", "s0", 1.0))
-            .add_action(Action::new("a0", "run", "s0"))
-            .add_state(State::new("s0", "ok"));
-        assert_eq!(builder.states.len(), 1);
-        assert_eq!(builder.actions.len(), 1);
-        assert_eq!(builder.transitions.len(), 1);
+            .add_action(s0, Action::new("a1", "repair"))
+            .add_action(s1, Action::new("b0", "wait"))
+            .add_action(s0, Action::new("a2", "stop"));
+        assert_eq!(
+            ids(&builder.states[0].actions, |a| &a.id),
+            ["a0", "a1", "a2"]
+        );
+        assert_eq!(ids(&builder.states[1].actions, |a| &a.id), ["b0"]);
+    }
+
+    #[test]
+    fn actions_can_be_built_separately() {
+        // A helper that produces actions, as when generating a model.
+        fn coin(id: &str, heads: &str, tails: &str) -> Action {
+            Action::new(id, "flip")
+                .transition(Transition::new(format!("{id}-heads"), heads, 0.5))
+                .transition(Transition::new(format!("{id}-tails"), tails, 0.5))
+        }
+
+        let mut builder = MdpBuilder::new();
+        let s0 = builder.add_state(State::new("s0", "s"));
+        let s1 = builder.add_state(State::new("s1", "s"));
+        builder
+            .add_action(s0, coin("a0", "s0", "s1"))
+            .add_action(s1, coin("a1", "s1", "s0"));
+        let flip = &builder.states[1].actions[0];
+        assert_eq!(ids(&flip.transitions, |t| &t.id), ["a1-heads", "a1-tails"]);
+        assert_eq!(flip.transitions[1].target_state_id, "s0");
     }
 
     #[test]
     fn builder_can_be_filled_in_a_loop() {
         let mut builder = MdpBuilder::new();
-        for i in 0..3 {
-            builder.add_state(State::new(format!("s{i}"), "s"));
+        let refs: Vec<StateRef> = (0..3)
+            .map(|i| builder.add_state(State::new(format!("s{i}"), "s")))
+            .collect();
+        for (i, &s) in refs.iter().enumerate() {
+            let next = format!("s{}", (i + 1) % 3);
+            builder.add_action(
+                s,
+                Action::new(format!("a{i}"), "next").transition(Transition::new(
+                    format!("t{i}"),
+                    next,
+                    1.0,
+                )),
+            );
         }
         assert_eq!(ids(&builder.states, |s| &s.id), ["s0", "s1", "s2"]);
+        assert_eq!(
+            builder.states[2].actions[0].transitions[0].target_state_id,
+            "s0"
+        );
     }
 
     #[test]
@@ -205,26 +280,31 @@ mod tests {
 
     #[test]
     fn same_target_with_different_rewards_is_kept_twice() {
-        let mut builder = MdpBuilder::new();
-        builder
-            .add_transition(Transition::new("t0", "a0", "s1", 0.3).reward(5.0))
-            .add_transition(Transition::new("t1", "a0", "s1", 0.2).reward(-1.0));
-        assert_eq!(builder.transitions.len(), 2);
-        assert_close(builder.transitions[0].reward, 5.0);
-        assert_close(builder.transitions[1].reward, -1.0);
+        let action = Action::new("a0", "x")
+            .transition(Transition::new("t0", "s1", 0.3).reward(5))
+            .transition(Transition::new("t1", "s1", 0.2).reward(-1));
+        assert_eq!(action.transitions.len(), 2);
+        assert_eq!(action.transitions[0].reward, 5);
+        assert_eq!(action.transitions[1].reward, -1);
     }
 
     #[test]
     fn builder_stores_invalid_input_without_checking() {
-        // Validation is the job of `build()` (task 1.2), not of `add_*`.
+        // Validation is the job of `build()`, not of `add_*`.
         let mut builder = MdpBuilder::new();
+        let s0 = builder.add_state(State::new("s0", "ok"));
+        builder.add_state(State::new("s0", "duplicate id"));
         builder
-            .add_state(State::new("s0", "ok"))
-            .add_state(State::new("s0", "duplicate id"))
-            .add_action(Action::new("a0", "run", "missing"))
-            .add_transition(Transition::new("t0", "a0", "s0", f64::NAN))
+            .add_action(
+                s0,
+                Action::new("a0", "run").transition(Transition::new("t0", "missing", f64::NAN)),
+            )
             .set_initial("missing");
         assert_eq!(builder.states.len(), 2);
-        assert!(builder.transitions[0].probability.is_nan());
+        assert!(
+            builder.states[0].actions[0].transitions[0]
+                .probability
+                .is_nan()
+        );
     }
 }

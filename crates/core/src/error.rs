@@ -9,6 +9,8 @@ pub enum ModelError {
     #[error("The transition id {0} already exist")]
     DuplicateTransitionId(String),
 
+    #[error("There is no initial state")]
+    NoInitialState,
     #[error("The state {0} does not exist")]
     UnknownInitialState(String),
     #[error("The action {action} with the source state {state} was not found")]
