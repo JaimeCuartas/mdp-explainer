@@ -1,23 +1,23 @@
 use crate::error::ModelError;
 use crate::mdp::{Mdp, MdpMetadata};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct State {
     pub id: String,
     pub label: String,
+    pub actions: Vec<Action>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Action {
     pub id: String,
     pub label: String,
-    pub source_state_id: String,
+    pub transitions: Vec<Transition>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Transition {
     pub id: String,
-    pub action_id: String,
     pub target_state_id: String,
     pub probability: f64,
     pub reward: i32,
@@ -28,34 +28,39 @@ impl State {
         Self {
             id: id.into(),
             label: label.into(),
+            actions: Vec::new(),
         }
+    }
+
+    pub fn action(mut self, a: Action) -> Self {
+        self.actions.push(a);
+        self
     }
 }
 
 impl Action {
-    pub fn new(
-        id: impl Into<String>,
-        label: impl Into<String>,
-        source_state_id: impl Into<String>,
-    ) -> Self {
+    pub fn new(id: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
-            source_state_id: source_state_id.into(),
+            transitions: Vec::new(),
         }
+    }
+
+    pub fn transition(mut self, t: Transition) -> Self {
+        self.transitions.push(t);
+        self
     }
 }
 
 impl Transition {
     pub fn new(
         id: impl Into<String>,
-        action_id: impl Into<String>,
         target_state_id: impl Into<String>,
         probability: f64,
     ) -> Self {
         Self {
             id: id.into(),
-            action_id: action_id.into(),
             target_state_id: target_state_id.into(),
             probability,
             reward: 0,
@@ -69,13 +74,14 @@ impl Transition {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct MdpBuilder {
     pub(crate) states: Vec<State>,
-    pub(crate) actions: Vec<Action>,
-    pub(crate) transitions: Vec<Transition>,
     pub(crate) initial: Option<String>,
 }
+
+#[derive(Debug,Clone, Copy, PartialEq, Eq)]
+pub struct StateRef(usize);
 
 impl MdpBuilder {
     #[must_use]
@@ -89,20 +95,20 @@ impl MdpBuilder {
         Mdp::from_builder(self)
     }
 
-    pub fn add_state(&mut self, s: State) -> &mut Self {
+    pub fn add_state(&mut self, s: State) -> StateRef {
         self.states.push(s);
+        StateRef(self.states.len()-1)
+    }
+
+    pub fn add_action(&mut self, s: StateRef, a: Action) -> &mut Self {
+        self.states[s.0].actions.push(a);
         self
     }
 
-    pub fn add_action(&mut self, a: Action) -> &mut Self {
-        self.actions.push(a);
-        self
-    }
-
-    pub fn add_transition(&mut self, t: Transition) -> &mut Self {
-        self.transitions.push(t);
-        self
-    }
+    // pub fn add_transition(&mut self, t: Transition) -> &mut Self {
+    //     self.transitions.push(t);
+    //     self
+    // }
 
     pub fn set_initial(&mut self, initial_id: impl Into<String>) -> &mut Self {
         self.initial = Some(initial_id.into());
