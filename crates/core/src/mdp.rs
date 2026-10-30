@@ -100,24 +100,24 @@ impl Mdp {
 
         for state in mdp_builder.states {
             action_start.push(from_usize_to_u32(action_ids.len())?);
-            for action in &state.actions {
+            for action in state.actions {
                 outcome_start.push(from_usize_to_u32(transition_ids.len())?);
                 match action_index.entry(action.id.clone()) {
                     Entry::Occupied(_) => {
-                        return Err(ModelError::DuplicateActionId(action.id.clone()));
+                        return Err(ModelError::DuplicateActionId(action.id));
                     }
                     Entry::Vacant(vacant) => {
                         let i: usize = action_ids.len();
                         vacant.insert(ActionIdx(from_usize_to_u32(i)?));
                     }
                 }
-                action_ids.push(action.id.clone());
-                action_labels.push(action.label.clone());
+                action_ids.push(action.id);
+                action_labels.push(action.label);
 
-                for transition in &action.transitions {
+                for transition in action.transitions {
                     match transition_index.entry(transition.id.clone()) {
                         Entry::Occupied(_) => {
-                            return Err(ModelError::DuplicateTransitionId(transition.id.clone()));
+                            return Err(ModelError::DuplicateTransitionId(transition.id));
                         }
                         Entry::Vacant(vacant) => {
                             let i: usize = transition_ids.len();
@@ -126,8 +126,8 @@ impl Mdp {
                     }
                     let Some(target_id) = state_index.get(&transition.target_state_id) else {
                         return Err(ModelError::UnknownTargetState {
-                            transition: transition.id.clone(),
-                            state: transition.target_state_id.clone(),
+                            transition: transition.id,
+                            state: transition.target_state_id,
                         });
                     };
                     if transition.probability.is_nan()
@@ -135,7 +135,7 @@ impl Mdp {
                         || transition.probability > 1.0
                     {
                         return Err(ModelError::InvalidProbability {
-                            transition: transition.id.clone(),
+                            transition: transition.id,
                             value: transition.probability,
                         });
                     }
@@ -215,6 +215,18 @@ impl Mdp {
     #[must_use]
     pub fn rewards(&self, a: ActionIdx) -> &[i32] {
         &self.rewards[self.outcome_range(a)]
+    }
+
+    /// # Panics
+    /// Never for any action from this `Mdp`
+    #[must_use]
+    pub fn source(&self, a: ActionIdx) -> StateIdx {
+        debug_assert!(
+            a.index() < self.num_actions(),
+            "action id is larger than num of actions"
+        );
+        let s = self.action_start.partition_point(|&start| start <= a.0) - 1;
+        StateIdx(u32::try_from(s).expect("Unexpected: state index should fits in u32"))
     }
 }
 
@@ -437,6 +449,36 @@ mod tests {
             ),
         );
         assert!(builder.build().is_ok());
+    }
+
+    #[test]
+    fn source_finds_the_state_of_each_action() {
+        // s1 has no actions, so s0 and s2 are next to each other in `action_start`.
+        let mut builder = MdpBuilder::new();
+        builder.add_state(
+            State::new("s0", "s")
+                .action(Action::new("a0", "x"))
+                .action(Action::new("a1", "y")),
+        );
+        builder.add_state(State::new("s1", "s"));
+        builder.add_state(State::new("s2", "s").action(Action::new("b0", "x")));
+        builder.add_state(State::new("s3", "s"));
+        builder.set_initial("s0");
+        let (mdp, meta) = builder.build().unwrap();
+
+        for (a, s) in [("a0", "s0"), ("a1", "s0"), ("b0", "s2")] {
+            assert_eq!(
+                mdp.source(action(&meta, a)),
+                state(&meta, s),
+                "source of {a}"
+            );
+        }
+        // Every action is in the action list of its source.
+        for s in mdp.states() {
+            for a in mdp.actions(s) {
+                assert_eq!(mdp.source(a), s);
+            }
+        }
     }
 
     // ---- errors ----
