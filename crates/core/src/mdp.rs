@@ -9,9 +9,6 @@ pub struct StateIdx(u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ActionIdx(u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TransitionIdx(u32);
-
 impl StateIdx {
     #[must_use]
     pub fn index(self) -> usize {
@@ -29,9 +26,11 @@ impl ActionIdx {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mdp {
     initial: StateIdx,
-    // indexed by state id
+    // actions of state s:
+    // action_start[s]..action_start[s+1]
     action_start: Vec<u32>,
-    // indexed by action id
+    // outcomes of actions a:
+    // outcome_start[a]..outcome_start[a+1]
     outcome_start: Vec<u32>,
     targets: Vec<StateIdx>,
     //TODO test converge and speed with Vec<f32>
@@ -50,7 +49,6 @@ pub struct MdpMetadata {
     action_index: HashMap<String, ActionIdx>,
 
     transition_ids: Vec<String>,
-    transition_index: HashMap<String, TransitionIdx>,
 }
 
 impl Mdp {
@@ -98,7 +96,7 @@ impl Mdp {
         let mut action_index: HashMap<String, ActionIdx> = HashMap::new();
 
         let mut transition_ids: Vec<String> = Vec::new();
-        let mut transition_index: HashMap<String, TransitionIdx> = HashMap::new();
+        let mut transition_index: HashMap<String, u32> = HashMap::new();
 
         for state in mdp_builder.states {
             action_start.push(from_usize_to_u32(action_ids.len())?);
@@ -123,7 +121,7 @@ impl Mdp {
                         }
                         Entry::Vacant(vacant) => {
                             let i: usize = transition_ids.len();
-                            vacant.insert(TransitionIdx(from_usize_to_u32(i)?));
+                            vacant.insert(from_usize_to_u32(i)?);
                         }
                     }
                     let Some(target_id) = state_index.get(&transition.target_state_id) else {
@@ -136,7 +134,10 @@ impl Mdp {
                         || transition.probability < 0.0
                         || transition.probability > 1.0
                     {
-                        return Err(ModelError::InvalidProbability { transition: transition.id.clone(), value: transition.probability });
+                        return Err(ModelError::InvalidProbability {
+                            transition: transition.id.clone(),
+                            value: transition.probability,
+                        });
                     }
                     transition_ids.push(transition.id.clone());
                     targets.push(*target_id);
@@ -167,7 +168,6 @@ impl Mdp {
                 action_index,
 
                 transition_ids,
-                transition_index,
             },
         ))
     }
@@ -203,7 +203,7 @@ impl Mdp {
     }
 
     #[must_use]
-    pub fn targets(&self, a: ActionIdx) -> &[StateIdx] {
+    pub fn successors(&self, a: ActionIdx) -> &[StateIdx] {
         &self.targets[self.outcome_range(a)]
     }
 
@@ -302,7 +302,7 @@ mod tests {
 
     /// Ids of the targets of `a`, in `Mdp` order.
     fn target_ids<'a>(mdp: &Mdp, meta: &'a MdpMetadata, a: &str) -> Vec<&'a str> {
-        mdp.targets(action(meta, a))
+        mdp.successors(action(meta, a))
             .iter()
             .map(|&t| meta.state_id(t))
             .collect()
@@ -389,7 +389,7 @@ mod tests {
 
         assert_eq!(target_ids(&mdp, &meta, "a0"), ["s1", "s0"]);
         assert_eq!(meta.transition_ids(&mdp, action(&meta, "a0")), ["t1", "t3"]);
-        assert!(mdp.targets(action(&meta, "a1")).is_empty());
+        assert!(mdp.successors(action(&meta, "a1")).is_empty());
     }
 
     #[test]

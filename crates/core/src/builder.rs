@@ -82,7 +82,7 @@ pub struct MdpBuilder {
     pub(crate) initial: Option<String>,
 }
 
-#[derive(Debug,Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StateRef(usize);
 
 impl MdpBuilder {
@@ -99,7 +99,7 @@ impl MdpBuilder {
 
     pub fn add_state(&mut self, s: State) -> StateRef {
         self.states.push(s);
-        StateRef(self.states.len()-1)
+        StateRef(self.states.len() - 1)
     }
 
     pub fn add_action(&mut self, s: StateRef, a: Action) -> &mut Self {
