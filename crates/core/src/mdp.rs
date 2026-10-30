@@ -1,5 +1,6 @@
-use crate::{Action, MdpBuilder, ModelError, Transition};
-use std::collections::{HashMap, HashSet};
+use crate::{MdpBuilder, ModelError};
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -7,6 +8,9 @@ pub struct StateIdx(u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ActionIdx(u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TransitionIdx(u32);
 
 impl StateIdx {
     #[must_use]
@@ -43,109 +47,129 @@ pub struct MdpMetadata {
 
     action_ids: Vec<String>,
     action_labels: Vec<String>,
-    action_source: Vec<StateIdx>,
     action_index: HashMap<String, ActionIdx>,
 
     transition_ids: Vec<String>,
+    transition_index: HashMap<String, TransitionIdx>,
 }
 
 impl Mdp {
-    /// The only constructor; called by `MdpBuilder::build`.
-    ///
-    /// Pass 1 checks the input by reference, in the order of CLAUDE.md §3.2,
-    /// and records only what it resolved. Pass 2 groups actions by source
-    /// state and transitions by action (keeping the input order inside each
-    /// group) and moves every string out exactly once.
     pub(crate) fn from_builder(mdp_builder: MdpBuilder) -> Result<(Mdp, MdpMetadata), ModelError> {
-        let MdpBuilder {
-            states,
-            mut actions,
-            mut transitions,
-            initial: initial_id,
-        } = mdp_builder;
-        let num_states = states.len();
-        let num_actions = actions.len();
-        let num_transitions = transitions.len();
-
-        // States are never reordered, so these vectors are already final.
+        // Metadata
+        let num_states = mdp_builder.states.len();
         let mut state_ids: Vec<String> = Vec::with_capacity(num_states);
         let mut state_labels: Vec<String> = Vec::with_capacity(num_states);
         let mut state_index: HashMap<String, StateIdx> = HashMap::with_capacity(num_states);
-        for (i, state) in states.into_iter().enumerate() {
-            let prev = state_index.insert(state.id.clone(), StateIdx(from_usize_to_u32(i)?));
-            if prev.is_some() {
-                return Err(ModelError::DuplicateStateId(state.id));
+
+        for state in &mdp_builder.states {
+            match state_index.entry(state.id.clone()) {
+                Entry::Occupied(_) => {
+                    return Err(ModelError::DuplicateStateId(state.id.clone()));
+                }
+                Entry::Vacant(vacant) => {
+                    let i: usize = state_ids.len();
+                    vacant.insert(StateIdx(from_usize_to_u32(i)?));
+                }
             }
-            state_ids.push(state.id);
-            state_labels.push(state.label);
+            state_ids.push(state.id.clone());
+            state_labels.push(state.label.clone());
         }
 
-        let (mut action_index, actions_by_state) = check_actions(&actions, &state_index)?;
-        let (transition_targets, transitions_by_action) =
-            check_transitions(&transitions, &action_index, &state_index)?;
-
-        // The initial state is checked last.
-        let initial_id = initial_id.ok_or(ModelError::NoInitialState)?;
-        let Some(&initial) = state_index.get(&initial_id) else {
-            return Err(ModelError::UnknownInitialState(initial_id));
+        // Checking if initial state exists
+        let Some(initial_builder) = mdp_builder.initial else {
+            return Err(ModelError::NoInitialState);
         };
 
-        // ---- Pass 2: grouping (CSR) ----
+        let initial_id = state_index.get(&initial_builder);
+        // Mdp Core
+        let Some(&initial) = initial_id else {
+            return Err(ModelError::UnknownInitialState(initial_builder));
+        };
+
         let mut action_start: Vec<u32> = Vec::with_capacity(num_states + 1);
-        let mut outcome_start: Vec<u32> = Vec::with_capacity(num_actions + 1);
-        let mut targets: Vec<StateIdx> = Vec::with_capacity(num_transitions);
-        let mut probabilities: Vec<f64> = Vec::with_capacity(num_transitions);
-        let mut rewards: Vec<i32> = Vec::with_capacity(num_transitions);
-        let mut action_ids: Vec<String> = Vec::with_capacity(num_actions);
-        let mut action_labels: Vec<String> = Vec::with_capacity(num_actions);
-        let mut action_source: Vec<StateIdx> = Vec::with_capacity(num_actions);
-        let mut transition_ids: Vec<String> = Vec::with_capacity(num_transitions);
+        let mut outcome_start: Vec<u32> = Vec::new();
 
-        action_start.push(0);
-        outcome_start.push(0);
-        // `(0u32..).zip` numbers the states without a `usize as u32` cast.
-        for (s, group) in (0u32..).zip(&actions_by_state) {
-            for &a in group {
-                // `mem::take` moves the String out and leaves "" behind.
-                let id = std::mem::take(&mut actions[a].id);
-                if let Some(index) = action_index.get_mut(&id) {
-                    *index = ActionIdx(from_usize_to_u32(action_ids.len())?);
+        let mut targets: Vec<StateIdx> = Vec::new();
+        let mut probabilities: Vec<f64> = Vec::new();
+        let mut rewards: Vec<i32> = Vec::new();
+
+        let mut action_ids: Vec<String> = Vec::new();
+        let mut action_labels: Vec<String> = Vec::new();
+        let mut action_index: HashMap<String, ActionIdx> = HashMap::new();
+
+        let mut transition_ids: Vec<String> = Vec::new();
+        let mut transition_index: HashMap<String, TransitionIdx> = HashMap::new();
+
+        for state in mdp_builder.states {
+            action_start.push(from_usize_to_u32(action_ids.len())?);
+            for action in &state.actions {
+                outcome_start.push(from_usize_to_u32(transition_ids.len())?);
+                match action_index.entry(action.id.clone()) {
+                    Entry::Occupied(_) => {
+                        return Err(ModelError::DuplicateActionId(action.id.clone()));
+                    }
+                    Entry::Vacant(vacant) => {
+                        let i: usize = action_ids.len();
+                        vacant.insert(ActionIdx(from_usize_to_u32(i)?));
+                    }
                 }
-                action_ids.push(id);
-                action_labels.push(std::mem::take(&mut actions[a].label));
-                action_source.push(StateIdx(s));
+                action_ids.push(action.id.clone());
+                action_labels.push(action.label.clone());
 
-                for &t in &transitions_by_action[a] {
-                    let transition = &mut transitions[t];
-                    targets.push(transition_targets[t]);
+                for transition in &action.transitions {
+                    match transition_index.entry(transition.id.clone()) {
+                        Entry::Occupied(_) => {
+                            return Err(ModelError::DuplicateTransitionId(transition.id.clone()));
+                        }
+                        Entry::Vacant(vacant) => {
+                            let i: usize = transition_ids.len();
+                            vacant.insert(TransitionIdx(from_usize_to_u32(i)?));
+                        }
+                    }
+                    let Some(target_id) = state_index.get(&transition.target_state_id) else {
+                        return Err(ModelError::UnknownTargetState {
+                            transition: transition.id.clone(),
+                            state: transition.target_state_id.clone(),
+                        });
+                    };
+                    if transition.probability.is_nan()
+                        || transition.probability < 0.0
+                        || transition.probability > 1.0
+                    {
+                        return Err(ModelError::InvalidProbability { transition: transition.id.clone(), value: transition.probability });
+                    }
+                    transition_ids.push(transition.id.clone());
+                    targets.push(*target_id);
                     probabilities.push(transition.probability);
                     rewards.push(transition.reward);
-                    transition_ids.push(std::mem::take(&mut transition.id));
                 }
-                outcome_start.push(from_usize_to_u32(targets.len())?);
             }
-            action_start.push(from_usize_to_u32(action_ids.len())?);
         }
 
-        let mdp = Mdp {
-            initial,
-            action_start,
-            outcome_start,
-            targets,
-            probabilities,
-            rewards,
-        };
-        let metadata = MdpMetadata {
-            state_ids,
-            state_labels,
-            state_index,
-            action_ids,
-            action_labels,
-            action_source,
-            action_index,
-            transition_ids,
-        };
-        Ok((mdp, metadata))
+        action_start.push(from_usize_to_u32(action_ids.len())?);
+        outcome_start.push(from_usize_to_u32(transition_ids.len())?);
+        Ok((
+            Mdp {
+                initial,
+                action_start,
+                outcome_start,
+                targets,
+                probabilities,
+                rewards,
+            },
+            MdpMetadata {
+                state_ids,
+                state_labels,
+                state_index,
+
+                action_ids,
+                action_labels,
+                action_index,
+
+                transition_ids,
+                transition_index,
+            },
+        ))
     }
 }
 
@@ -215,11 +239,6 @@ impl MdpMetadata {
         &self.action_labels[a.index()]
     }
 
-    #[must_use]
-    pub fn source(&self, a: ActionIdx) -> StateIdx {
-        self.action_source[a.index()]
-    }
-
     /// The transition ids of `a`, parallel to `mdp.targets(a)`.
     #[must_use]
     pub fn transition_ids<'a>(&'a self, mdp: &Mdp, a: ActionIdx) -> &'a [String] {
@@ -235,80 +254,6 @@ impl MdpMetadata {
     pub fn action_by_id(&self, id: &str) -> Option<ActionIdx> {
         self.action_index.get(id).copied()
     }
-}
-
-//helpers
-/// For each group (a state or an action), the input positions of its
-/// members, in input order.
-type Groups = Vec<Vec<usize>>;
-
-/// Pass 1 for actions, in input order: duplicate ids and unknown sources.
-/// Returns the id -> input position map (pass 2 replaces the positions with
-/// the final `ActionIdx`) and the input positions of the actions of each state.
-fn check_actions(
-    actions: &[Action],
-    state_index: &HashMap<String, StateIdx>,
-) -> Result<(HashMap<String, ActionIdx>, Groups), ModelError> {
-    let mut action_index: HashMap<String, ActionIdx> = HashMap::with_capacity(actions.len());
-    let mut actions_by_state: Groups = vec![Vec::new(); state_index.len()];
-    for (i, action) in actions.iter().enumerate() {
-        let prev = action_index.insert(action.id.clone(), ActionIdx(from_usize_to_u32(i)?));
-        if prev.is_some() {
-            return Err(ModelError::DuplicateActionId(action.id.clone()));
-        }
-        let source = state_index
-            .get(&action.source_state_id)
-            .copied()
-            .ok_or_else(|| ModelError::UnknownSourceState {
-                action: action.id.clone(),
-                state: action.source_state_id.clone(),
-            })?;
-        actions_by_state[source.index()].push(i);
-    }
-    Ok((action_index, actions_by_state))
-}
-
-/// Pass 1 for transitions, in input order: duplicate ids, unknown actions and
-/// targets, invalid probabilities. Returns the target of each transition (by
-/// input position) and the input positions of the transitions of each action.
-fn check_transitions(
-    transitions: &[Transition],
-    action_index: &HashMap<String, ActionIdx>,
-    state_index: &HashMap<String, StateIdx>,
-) -> Result<(Vec<StateIdx>, Groups), ModelError> {
-    // Borrows the ids, so no String is cloned to detect duplicates.
-    let mut seen_ids: HashSet<&str> = HashSet::with_capacity(transitions.len());
-    let mut targets: Vec<StateIdx> = Vec::with_capacity(transitions.len());
-    let mut transitions_by_action: Groups = vec![Vec::new(); action_index.len()];
-    for (i, transition) in transitions.iter().enumerate() {
-        if !seen_ids.insert(&transition.id) {
-            return Err(ModelError::DuplicateTransitionId(transition.id.clone()));
-        }
-        let action = action_index
-            .get(&transition.action_id)
-            .copied()
-            .ok_or_else(|| ModelError::UnknownAction {
-                transition: transition.id.clone(),
-                action: transition.action_id.clone(),
-            })?;
-        let target = state_index
-            .get(&transition.target_state_id)
-            .copied()
-            .ok_or_else(|| ModelError::UnknownTargetState {
-                transition: transition.id.clone(),
-                state: transition.target_state_id.clone(),
-            })?;
-        // NaN and the infinities are outside the range too.
-        if !(0.0..=1.0).contains(&transition.probability) {
-            return Err(ModelError::InvalidProbability {
-                transition: transition.id.clone(),
-                value: transition.probability,
-            });
-        }
-        transitions_by_action[action.index()].push(i);
-        targets.push(target);
-    }
-    Ok((targets, transitions_by_action))
 }
 
 fn from_usize_to_u32(index: usize) -> Result<u32, ModelError> {
@@ -387,7 +332,6 @@ mod tests {
         assert_eq!(mdp.probabilities(a0), [0.9, 0.1]);
         assert_eq!(mdp.rewards(a0), [2, 0]);
         assert_eq!(meta.transition_ids(&mdp, a0), ["t0", "t1"]);
-        assert_eq!(meta.source(a0), state(&meta, "s0"));
 
         let a1 = action(&meta, "a1");
         assert_eq!(target_ids(&mdp, &meta, "a1"), ["s0"]);
@@ -424,7 +368,6 @@ mod tests {
             .collect();
         assert_eq!(all, ["a0", "a1", "b0", "b1"]);
         assert_eq!(action(&meta, "b0").index(), 2);
-        assert_eq!(meta.source(action(&meta, "b1")), state(&meta, "s1"));
         assert_eq!(meta.action_label(action(&meta, "b1")), "y");
     }
 
@@ -596,16 +539,34 @@ mod tests {
     }
 
     #[test]
+    fn initial_state_is_checked_after_states_before_actions() {
+        // A bad transition comes first in the input, but the initial state
+        // is checked right after the states.
+        let mut builder = MdpBuilder::new();
+        builder.add_state(
+            State::new("s0", "s")
+                .action(Action::new("a0", "x").transition(Transition::new("t0", "s0", 2.0))),
+        );
+        builder.set_initial("nowhere");
+        assert!(matches!(
+            build_err(builder.clone()),
+            ModelError::UnknownInitialState(_)
+        ));
+
+        builder.initial = None;
+        assert!(matches!(build_err(builder), ModelError::NoInitialState));
+    }
+
+    #[test]
     fn actions_and_transitions_are_checked_depth_first() {
-        // A bad probability in s0 is found before a duplicate action in s1,
-        // and both before the unknown initial state.
+        // A bad probability in s0 is found before a duplicate action in s1.
         let mut builder = MdpBuilder::new();
         builder.add_state(
             State::new("s0", "s")
                 .action(Action::new("a0", "x").transition(Transition::new("t0", "s1", 2.0))),
         );
         builder.add_state(State::new("s1", "s").action(Action::new("a0", "again")));
-        builder.set_initial("nowhere");
+        builder.set_initial("s0");
         assert!(matches!(
             build_err(builder),
             ModelError::InvalidProbability { .. }

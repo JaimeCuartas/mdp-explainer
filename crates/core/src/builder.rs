@@ -32,6 +32,7 @@ impl State {
         }
     }
 
+    #[must_use]
     pub fn action(mut self, a: Action) -> Self {
         self.actions.push(a);
         self
@@ -47,6 +48,7 @@ impl Action {
         }
     }
 
+    #[must_use]
     pub fn transition(mut self, t: Transition) -> Self {
         self.transitions.push(t);
         self
