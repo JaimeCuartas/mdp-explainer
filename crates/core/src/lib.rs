@@ -1,5 +1,5 @@
 mod builder;
-pub use builder::{Action, MdpBuilder, State, Transition};
+pub use builder::{Action, MdpBuilder, State, StateRef, Transition};
 
 mod error;
 pub use error::{ModelError, Warning};

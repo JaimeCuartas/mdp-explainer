@@ -107,11 +107,6 @@ impl MdpBuilder {
         self
     }
 
-    // pub fn add_transition(&mut self, t: Transition) -> &mut Self {
-    //     self.transitions.push(t);
-    //     self
-    // }
-
     pub fn set_initial(&mut self, initial_id: impl Into<String>) -> &mut Self {
         self.initial = Some(initial_id.into());
         self

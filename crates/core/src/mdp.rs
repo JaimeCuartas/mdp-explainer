@@ -1,5 +1,6 @@
 use crate::{MdpBuilder, ModelError};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 use std::ops::Range;
 
@@ -94,7 +95,7 @@ impl Mdp {
         let mut action_index: HashMap<String, ActionIdx> = HashMap::new();
 
         let mut transition_ids: Vec<String> = Vec::new();
-        let mut transition_index: HashMap<String, u32> = HashMap::new();
+        let mut transition_index: HashSet<String> = HashSet::new();
 
         for state in mdp_builder.states {
             action_start.push(from_usize_to_u32(action_ids.len())?);
@@ -113,32 +114,23 @@ impl Mdp {
                 action_labels.push(action.label);
 
                 for transition in action.transitions {
-                    match transition_index.entry(transition.id.clone()) {
-                        Entry::Occupied(_) => {
-                            return Err(ModelError::DuplicateTransitionId(transition.id));
-                        }
-                        Entry::Vacant(vacant) => {
-                            let i: usize = transition_ids.len();
-                            vacant.insert(from_usize_to_u32(i)?);
-                        }
+                    if !transition_index.insert(transition.id.clone()) {
+                        return Err(ModelError::DuplicateTransitionId(transition.id));
                     }
-                    let Some(target_id) = state_index.get(&transition.target_state_id) else {
+                    let Some(&target) = state_index.get(&transition.target_state_id) else {
                         return Err(ModelError::UnknownTargetState {
                             transition: transition.id,
                             state: transition.target_state_id,
                         });
                     };
-                    if transition.probability.is_nan()
-                        || transition.probability < 0.0
-                        || transition.probability > 1.0
-                    {
+                    if !(0.0..=1.0).contains(&transition.probability) {
                         return Err(ModelError::InvalidProbability {
                             transition: transition.id,
                             value: transition.probability,
                         });
                     }
-                    transition_ids.push(transition.id.clone());
-                    targets.push(*target_id);
+                    transition_ids.push(transition.id);
+                    targets.push(target);
                     probabilities.push(transition.probability);
                     rewards.push(transition.reward);
                 }
