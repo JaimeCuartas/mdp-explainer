@@ -2,28 +2,22 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum ModelError {
-    #[error("The state id {0} already exist")]
+    #[error("The state id \"{0}\" already exist")]
     DuplicateStateId(String),
-    #[error("The action id {0} already exist")]
+    #[error("The action id \"{0}\" already exist")]
     DuplicateActionId(String),
-    #[error("The transition id {0} already exist")]
+    #[error("The transition id \"{0}\" already exist")]
     DuplicateTransitionId(String),
 
     #[error("There is no initial state")]
     NoInitialState,
-    #[error("The state {0} does not exist")]
+    #[error("The state \"{0}\" does not exist")]
     UnknownInitialState(String),
-    #[error("The action {action} with the source state {state} was not found")]
-    UnknownSourceState { action: String, state: String },
-    #[error("The action {action} to the transition {transition} was not found")]
-    UnknownAction { transition: String, action: String },
     #[error("The transition {transition} with the target state {state} was not found")]
     UnknownTargetState { transition: String, state: String },
 
     #[error("The probaility value {value} for the transition {transition} is not valid")]
     InvalidProbability { transition: String, value: f64 },
-    #[error("The reward value {value} for the transition {transition} is not valid")]
-    InvalidReward { transition: String, value: f64 },
 
     #[error("The state, action or transition has had an overflow for type u32")]
     Overflow,
@@ -39,10 +33,10 @@ impl fmt::Display for Warning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Warning::ProbabilitySum { action, sum } => {
-                write!(f, "Action{action} is summing up {sum}")
+                write!(f, "Action \"{action}\": transition probabilities sum to {sum}, not 1")
             }
             Warning::PolicySum { state, sum } => {
-                write!(f, "The policy at state {state} is summing up {sum}")
+                write!(f, "State \"{state}\": policy weights sum to {sum}, not 1")
             }
         }
     }
