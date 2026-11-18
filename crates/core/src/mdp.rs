@@ -59,13 +59,12 @@ impl Mdp {
         let mut state_labels: Vec<String> = Vec::with_capacity(num_states);
         let mut state_index: HashMap<String, StateIdx> = HashMap::with_capacity(num_states);
 
-        for state in &mdp_builder.states {
+        for (i, state) in mdp_builder.states.iter().enumerate() {
             match state_index.entry(state.id.clone()) {
                 Entry::Occupied(_) => {
                     return Err(ModelError::DuplicateStateId(state.id.clone()));
                 }
                 Entry::Vacant(vacant) => {
-                    let i: usize = state_ids.len();
                     vacant.insert(StateIdx(from_usize_to_u32(i)?));
                 }
             }
@@ -74,14 +73,13 @@ impl Mdp {
         }
 
         // Checking if initial state exists
-        let Some(initial_builder) = mdp_builder.initial else {
+        let Some(initial_id) = mdp_builder.initial else {
             return Err(ModelError::NoInitialState);
         };
 
-        let initial_id = state_index.get(&initial_builder);
         // Mdp Core
-        let Some(&initial) = initial_id else {
-            return Err(ModelError::UnknownInitialState(initial_builder));
+        let Some(&initial) = state_index.get(&initial_id) else {
+            return Err(ModelError::UnknownInitialState(initial_id));
         };
 
         let mut action_start: Vec<u32> = Vec::with_capacity(num_states + 1);
